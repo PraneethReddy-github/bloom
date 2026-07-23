@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bloom</title>
+  <link rel="stylesheet" href="bloom.css">
+</head>
+<body>
+  <div id="stage">
+    <div id="backdrop">
+      <img id="frost" alt="">
+      <div id="vignette"></div>
+      <div id="grain"></div>
+    </div>
+
+    <svg id="wires">
+      <defs>
+        <linearGradient id="accgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#5EEAD4"/>
+          <stop offset="100%" stop-color="#A78BFA"/>
+        </linearGradient>
+      </defs>
+      <g id="wire-guides"></g>
+      <g id="wire-spokes"></g>
+      <g id="wire-arcs"></g>
+    </svg>
+
+    <div id="rings"></div>
+    <div id="hud">
+      <div class="hud-label"></div>
+      <div class="crumbs"></div>
+    </div>
+
+    <div id="chip"></div>
+    <div id="palette" class="glass-card"></div>
+    <div id="toasts"></div>
+    <div id="ctx" class="glass-card"></div>
+    <div id="cheat" class="glass-card"></div>
+  </div>
+
+  <script src="icons.js"></script>
+  <script src="bloom.js"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+/* Bloom onboarding. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --acc: #007ACC;                 /* user's accent, set from config in JS */
+  --ink: #f3f4f8;
+  --ink-dim: #9aa0b0;
+  --ink-faint: #6b7180;
+  --line: rgba(255, 255, 255, 0.12);
+}
+
+html, body { height: 100%; overflow: hidden; }
+/* solid black window; content sits directly on it, no card panel */
+body {
+  background: #000;
+  color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px; line-height: 1.5;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; -webkit-font-smoothing: antialiased;
+  -webkit-app-region: drag;
+}
+body button, body input { -webkit-app-region: no-drag; }
+
+#drag { display: none; }
+
+#card {
+  width: 520px; max-width: calc(100vw - 24px);
+  padding: 40px 40px 26px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+
+/* the slide viewport clips the horizontal swipe */
+.ob-viewport { width: 100%; overflow: hidden; }
+.ob-slide { display: flex; flex-direction: column; align-items: center; }
+.ob-slide.in-right { animation: swipeInRight 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+.ob-slide.in-left  { animation: swipeInLeft  0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes swipeInRight { from { opacity: 0; transform: translateX(46px); } to { opacity: 1; transform: none; } }
+@keyframes swipeInLeft  { from { opacity: 0; transform: translateX(-46px); } to { opacity: 1; transform: none; } }
+
+/* fixed-height art keeps the card from resizing between steps */
+.ob-art {
+  height: 148px; margin-bottom: 28px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ob-art svg { display: block; }
+
+h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; color: #fff; margin-bottom: 12px; }
+#ob-p { font-size: 15px; color: var(--ink-dim); max-width: 384px; min-height: 66px; }
+#ob-p b { color: var(--ink); font-weight: 600; }
+
+/* key chips */
+.ob-keys { display: flex; gap: 12px; }
+.ob-key {
+  min-width: 62px; height: 62px; padding: 0 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 600; color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ob-foot { width: 100%; margin-top: 34px; display: flex; align-items: center; justify-content: space-between; }
+.ob-dots { display: flex; gap: 8px; }
+.ob-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); transition: all 0.25s ease; }
+.ob-dots i.on { background: var(--acc); transform: scale(1.2); }
+
+.ob-btn {
+  height: 40px; min-width: 96px; padding: 0 22px;
+  border: 1px solid transparent; border-radius: 11px;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  -webkit-app-region: no-drag; transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.ob-btn.primary { background: var(--acc); color: #fff; }
+.ob-btn.primary:hover { filter: brightness(1.12); }
+.ob-btn.ghost { background: transparent; color: var(--ink-faint); }
+.ob-btn.ghost:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
+}

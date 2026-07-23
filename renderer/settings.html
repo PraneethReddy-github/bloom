@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloom Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div class="topbar-brand">
+        <span id="app-glyph" aria-hidden="true"></span>
+        <span class="topbar-title">Bloom</span>
+      </div>
+      <div class="global-search" id="global-search-wrap">
+        <span class="gs-icon" aria-hidden="true"></span>
+        <input id="global-search" type="text" placeholder="Search settings &amp; actions…"
+               aria-label="Global search" autocomplete="off" spellcheck="false">
+        <div id="gs-results" class="gs-results" role="listbox" aria-label="Search results" hidden></div>
+      </div>
+      <div class="win-controls">
+        <button class="win-btn" id="win-min" title="Minimize" aria-label="Minimize"></button>
+        <button class="win-btn" id="win-max" title="Maximize" aria-label="Maximize"></button>
+        <button class="win-btn win-close" id="win-close" title="Close" aria-label="Close"></button>
+      </div>
+    </header>
+
+    <div id="shell">
+      <nav id="rail" aria-label="Settings sections">
+        <button class="rail-item" data-tab="actions"><span class="rail-ic" data-ic="grid"></span>Actions</button>
+        <button class="rail-item" data-tab="appearance"><span class="rail-ic" data-ic="eye"></span>Appearance</button>
+        <button class="rail-item" data-tab="hotkeys"><span class="rail-ic" data-ic="keyboard"></span>Hotkeys &amp; Input</button>
+        <button class="rail-item" data-tab="profiles"><span class="rail-ic" data-ic="clipboard"></span>Profiles</button>
+        <button class="rail-item" data-tab="general"><span class="rail-ic" data-ic="gear"></span>General &amp; Startup</button>
+        <button class="rail-item" data-tab="about"><span class="rail-ic" data-ic="bloom"></span>About &amp; Updates</button>
+      </nav>
+
+      <main id="content" tabindex="-1">
+        <section class="tab" id="tab-actions" hidden></section>
+        <section class="tab" id="tab-appearance" hidden></section>
+        <section class="tab" id="tab-hotkeys" hidden></section>
+        <section class="tab" id="tab-profiles" hidden></section>
+        <section class="tab" id="tab-general" hidden></section>
+        <section class="tab" id="tab-about" hidden></section>
+        <div id="toasts" aria-live="polite"></div>
+      </main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+
+  <script src="icons.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

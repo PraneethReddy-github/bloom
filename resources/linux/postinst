@@ -1,0 +1,5 @@
+#!/bin/bash
+echo ""
+echo -e "\e[1;35m🌸 Bloom has successfully installed!\e[0m"
+echo -e "\e[1;37mOpen the 'Bloom' app from your application menu to start blooming.\e[0m"
+echo ""

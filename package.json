@@ -1,0 +1,28 @@
+{
+  "name": "bloom",
+  "productName": "Bloom",
+  "version": "1.0.0",
+  "description": "Everything, one bloom away. A floating, layered, glass quick-action launcher.",
+  "author": "Bloom",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+
+    "dist": "electron-builder",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2"
+  },
+  "optionalDependencies": {
+    "electron-updater": "^6.3.9"
+  }
+}

@@ -1,0 +1,71 @@
+name: Build Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for this test build (optional)'
+        required: false
+        default: 'manual test'
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build · Windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - run: npm install
+      - name: Build Windows
+        env:
+          GH_TOKEN: ''
+        run: npm run dist:win -- --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-windows
+          path: dist-electron/*.exe
+          retention-days: 7
+          if-no-files-found: error
+
+  build-linux:
+    name: Build · Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - run: sudo apt-get update -y && sudo apt-get install -y rpm libarchive-tools xdotool wtype wl-clipboard xclip speech-dispatcher espeak-ng libnotify4 libnss3 libxss1 libsecret-1-0 libsecret-1-dev
+      - run: npm install
+      - name: Build Linux
+        env:
+          GH_TOKEN: ''
+        run: npm run dist:linux -- --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-linux
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
+          retention-days: 7
+          if-no-files-found: error
+
+  summary:
+    name: Build Summary
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "✅ Test builds complete!"
+          echo "👉 Download from: Actions → this run → Artifacts"
+          echo "   test-windows → .exe installer"
+          echo "   test-linux   → .AppImage / .deb"
+          echo ""
+          echo "👉 To release: git tag v<ver> && git push origin v<ver>"

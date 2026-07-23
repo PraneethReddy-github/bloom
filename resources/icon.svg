@@ -1,0 +1,11 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="1024" height="1024" rx="228" fill="#000000"/>
+  <!-- Bloom mark: five overlapping circles (pentagon venn). Computed exactly for smoothness. -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="26">
+    <circle cx="512" cy="386.1" r="140.3"/>
+    <circle cx="633.695" cy="474.55" r="140.3"/>
+    <circle cx="587.335" cy="617.9" r="140.3"/>
+    <circle cx="436.665" cy="617.9" r="140.3"/>
+    <circle cx="390.305" cy="474.55" r="140.3"/>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+{
+  "appId": "dev.bloom.app",
+  "productName": "Bloom",
+  "directories": {
+    "output": "dist-electron",
+    "buildResources": "resources"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    "config.js",
+    "renderer/**/*",
+    "!test${/*}",
+    "!**/*.map",
+    "!**/*.md"
+  ],
+  "asarUnpack": [
+    "**/node_modules/onnxruntime-node/**/*",
+    "**/node_modules/sharp/**/*",
+    "**/node_modules/@img/**/*"
+  ],
+  "npmRebuild": false,
+  "win": {
+    "target": ["nsis"],
+    "icon": "resources/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true
+  },
+  "mac": {
+    "target": ["dmg", "zip"],
+    "icon": "resources/icon.png",
+    "category": "public.app-category.productivity"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "icon": "resources/icons",
+    "category": "Utility",
+    "maintainer": "Bloom",
+    "executableArgs": ["--no-sandbox"]
+  },
+  "deb": {
+    "depends": [
+      "xdotool",
+      "wtype",
+      "wl-clipboard",
+      "xclip",
+      "speech-dispatcher",
+      "espeak-ng",
+      "libnotify4",
+      "libnss3",
+      "libxss1",
+      "libsecret-1-0"
+    ]
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "Praneethreddy-github",
+    "repo": "bloom"
+  }
+}

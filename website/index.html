@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloom - Everything, one bloom away</title>
+  <meta name="description" content="A floating, layered, glass quick-action launcher for Windows and Linux." />
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="background-animation"></div>
+  
+  <main class="container">
+    <div class="glass-card">
+      <header>
+        <div class="logo">🌸</div>
+        <h1>Bloom</h1>
+        <p class="tagline">Everything, one bloom away.</p>
+      </header>
+
+      <section class="description">
+        <p>A floating, draggable glass bud that lives on top of your desktop. Click it and it <strong>blooms</strong> into a circular menu of your actions. Nest as deep as you like.</p>
+      </section>
+
+      <section class="downloads">
+        <h2>Download Latest</h2>
+        <div id="loading" class="loading">Fetching latest release...</div>
+        
+        <div id="download-buttons" class="button-group hidden">
+          <a id="btn-win" href="#" class="btn btn-windows">
+            <svg viewBox="0 0 88 88" width="20" height="20"><path fill="currentColor" d="M0 12.402l35.687-4.86.016 34.423-35.703-.174zm0 37.382l35.687.21L35.703 82.38 0 77.295zm39.815-42.69L87.314 0v41.977l-47.499.231zm0 42.138L87.314 88V47.288L39.815 47z"/></svg>
+            Windows (.exe)
+          </a>
+          <a id="btn-linux-deb" href="#" class="btn btn-linux">
+            <svg viewBox="0 0 128 128" width="20" height="20"><path fill="currentColor" d="M64 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 1 9-3 9-8 0-5-3-9-7-9zm19 23c-5 0-8 3-8 8s4 8 8 8 8-4 8-8-3-8-8-8zm-41 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 0 9-4 9-8 0-5-3-9-7-9zm23 11c-13 0-23 6-27 15-22 5-30 25-24 45 4 12 11 16 19 22h-1c-1-1-4 1-5 2l1 1c2-1 4-2 7-1 4 1 9 4 15 4h18c7 0 14-4 22-8 3 0 5 1 7 1l1-1c-1-1-3-2-5-2-4 0-5-2-6-3-5 5-21 9-34 9s-26-4-29-7c-5-5-10-15-13-26-5-18 2-33 16-37 5-8 16-14 30-14 14 0 26 5 32 14 13 4 20 18 16 35-4 13-10 22-15 28-3 3-3 6-8 7-3 0-6-1-8-2v-1c4-1 6-5 6-7 0 0 5-6 8-15 3-11 0-20-4-22 0-1-1-2-3-2-12-6-31 6-39 10 2-4 7-9 15-10 11-1 30 5 44 23 2-23-9-39-26-44-3-8-13-13-25-13zm0 5c12 0 20 7 24 16h-46c4-10 12-16 22-16zm-39 37c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4zm75 0c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4z"/></svg>
+            Linux (.deb)
+          </a>
+          <a id="btn-linux-appimage" href="#" class="btn btn-linux">
+            <svg viewBox="0 0 128 128" width="20" height="20"><path fill="currentColor" d="M64 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 1 9-3 9-8 0-5-3-9-7-9zm19 23c-5 0-8 3-8 8s4 8 8 8 8-4 8-8-3-8-8-8zm-41 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 0 9-4 9-8 0-5-3-9-7-9zm23 11c-13 0-23 6-27 15-22 5-30 25-24 45 4 12 11 16 19 22h-1c-1-1-4 1-5 2l1 1c2-1 4-2 7-1 4 1 9 4 15 4h18c7 0 14-4 22-8 3 0 5 1 7 1l1-1c-1-1-3-2-5-2-4 0-5-2-6-3-5 5-21 9-34 9s-26-4-29-7c-5-5-10-15-13-26-5-18 2-33 16-37 5-8 16-14 30-14 14 0 26 5 32 14 13 4 20 18 16 35-4 13-10 22-15 28-3 3-3 6-8 7-3 0-6-1-8-2v-1c4-1 6-5 6-7 0 0 5-6 8-15 3-11 0-20-4-22 0-1-1-2-3-2-12-6-31 6-39 10 2-4 7-9 15-10 11-1 30 5 44 23 2-23-9-39-26-44-3-8-13-13-25-13zm0 5c12 0 20 7 24 16h-46c4-10 12-16 22-16zm-39 37c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4zm75 0c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4z"/></svg>
+            Linux (.AppImage)
+          </a>
+        </div>
+        <p id="release-info" class="version-info"></p>
+        <p id="error-msg" class="error hidden">Could not load latest release. <a href="https://github.com/Praneethreddy-github/bloom/releases">View all releases on GitHub</a>.</p>
+      </section>
+
+      <footer>
+        <a href="https://github.com/Praneethreddy-github/bloom">View on GitHub</a>
+      </footer>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
