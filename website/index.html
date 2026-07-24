@@ -1,55 +1,449 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bloom - Everything, one bloom away</title>
-  <meta name="description" content="A floating, layered, glass quick-action launcher for Windows and Linux." />
-  <link rel="stylesheet" href="styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bloom — One bloom away.</title>
+<meta name="description" content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — plus offline Whisper dictation and native read-aloud. Windows &amp; Linux. MIT." />
+<meta property="og:title" content="Bloom — One bloom away." />
+<meta property="og:description" content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Local voice AI included." />
+<meta name="theme-color" content="#08080a" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='228' fill='%2308080a'/%3E%3Cg fill='none' stroke='%23f1ede6' stroke-width='30'%3E%3Ccircle cx='512' cy='386.1' r='140.3'/%3E%3Ccircle cx='633.7' cy='474.55' r='140.3'/%3E%3Ccircle cx='587.34' cy='617.9' r='140.3'/%3E%3Ccircle cx='436.67' cy='617.9' r='140.3'/%3E%3Ccircle cx='390.31' cy='474.55' r='140.3'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="background-animation"></div>
-  
-  <main class="container">
-    <div class="glass-card">
-      <header>
-        <div class="logo">🌸</div>
-        <h1>Bloom</h1>
-        <p class="tagline">Everything, one bloom away.</p>
-      </header>
 
-      <section class="description">
-        <p>A floating, draggable glass bud that lives on top of your desktop. Click it and it <strong>blooms</strong> into a circular menu of your actions. Nest as deep as you like.</p>
-      </section>
+<canvas id="petals" aria-hidden="true"></canvas>
+<div class="spotlight" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
 
-      <section class="downloads">
-        <h2>Download Latest</h2>
-        <div id="loading" class="loading">Fetching latest release...</div>
-        
-        <div id="download-buttons" class="button-group hidden">
-          <a id="btn-win" href="#" class="btn btn-windows">
-            <svg viewBox="0 0 88 88" width="20" height="20"><path fill="currentColor" d="M0 12.402l35.687-4.86.016 34.423-35.703-.174zm0 37.382l35.687.21L35.703 82.38 0 77.295zm39.815-42.69L87.314 0v41.977l-47.499.231zm0 42.138L87.314 88V47.288L39.815 47z"/></svg>
-            Windows (.exe)
-          </a>
-          <a id="btn-linux-deb" href="#" class="btn btn-linux">
-            <svg viewBox="0 0 128 128" width="20" height="20"><path fill="currentColor" d="M64 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 1 9-3 9-8 0-5-3-9-7-9zm19 23c-5 0-8 3-8 8s4 8 8 8 8-4 8-8-3-8-8-8zm-41 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 0 9-4 9-8 0-5-3-9-7-9zm23 11c-13 0-23 6-27 15-22 5-30 25-24 45 4 12 11 16 19 22h-1c-1-1-4 1-5 2l1 1c2-1 4-2 7-1 4 1 9 4 15 4h18c7 0 14-4 22-8 3 0 5 1 7 1l1-1c-1-1-3-2-5-2-4 0-5-2-6-3-5 5-21 9-34 9s-26-4-29-7c-5-5-10-15-13-26-5-18 2-33 16-37 5-8 16-14 30-14 14 0 26 5 32 14 13 4 20 18 16 35-4 13-10 22-15 28-3 3-3 6-8 7-3 0-6-1-8-2v-1c4-1 6-5 6-7 0 0 5-6 8-15 3-11 0-20-4-22 0-1-1-2-3-2-12-6-31 6-39 10 2-4 7-9 15-10 11-1 30 5 44 23 2-23-9-39-26-44-3-8-13-13-25-13zm0 5c12 0 20 7 24 16h-46c4-10 12-16 22-16zm-39 37c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4zm75 0c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4z"/></svg>
-            Linux (.deb)
-          </a>
-          <a id="btn-linux-appimage" href="#" class="btn btn-linux">
-            <svg viewBox="0 0 128 128" width="20" height="20"><path fill="currentColor" d="M64 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 1 9-3 9-8 0-5-3-9-7-9zm19 23c-5 0-8 3-8 8s4 8 8 8 8-4 8-8-3-8-8-8zm-41 4c-5 0-9 4-9 9 0 4 3 8 7 8 5 0 9-4 9-8 0-5-3-9-7-9zm23 11c-13 0-23 6-27 15-22 5-30 25-24 45 4 12 11 16 19 22h-1c-1-1-4 1-5 2l1 1c2-1 4-2 7-1 4 1 9 4 15 4h18c7 0 14-4 22-8 3 0 5 1 7 1l1-1c-1-1-3-2-5-2-4 0-5-2-6-3-5 5-21 9-34 9s-26-4-29-7c-5-5-10-15-13-26-5-18 2-33 16-37 5-8 16-14 30-14 14 0 26 5 32 14 13 4 20 18 16 35-4 13-10 22-15 28-3 3-3 6-8 7-3 0-6-1-8-2v-1c4-1 6-5 6-7 0 0 5-6 8-15 3-11 0-20-4-22 0-1-1-2-3-2-12-6-31 6-39 10 2-4 7-9 15-10 11-1 30 5 44 23 2-23-9-39-26-44-3-8-13-13-25-13zm0 5c12 0 20 7 24 16h-46c4-10 12-16 22-16zm-39 37c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4zm75 0c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4z"/></svg>
-            Linux (.AppImage)
-          </a>
-        </div>
-        <p id="release-info" class="version-info"></p>
-        <p id="error-msg" class="error hidden">Could not load latest release. <a href="https://github.com/Praneethreddy-github/bloom/releases">View all releases on GitHub</a>.</p>
-      </section>
+<a class="skip-link" href="#main">Skip to content</a>
 
-      <footer>
-        <a href="https://github.com/Praneethreddy-github/bloom">View on GitHub</a>
-      </footer>
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand" data-magnetic>
+      <span class="brand-mark" id="brandMark"></span>
+      <span class="brand-word">Bloom</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#bud">The bud</a>
+      <a href="#dial">The dial</a>
+      <a href="#voice">Voice</a>
+      <a href="#actions">Actions</a>
+      <a href="#keys">Hotkeys</a>
+      <a href="#download">Download</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-quiet" href="https://github.com/Praneethreddy-github/bloom" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        Source
+      </a>
+      <a class="btn btn-solid" href="#download" data-magnetic>Download</a>
     </div>
-  </main>
-  <script src="app.js"></script>
+    <button class="burger" id="burger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu">
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#bud">The bud</a>
+  <a href="#dial">The dial</a>
+  <a href="#voice">Voice</a>
+  <a href="#actions">Actions</a>
+  <a href="#keys">Hotkeys</a>
+  <a href="#settings">Settings</a>
+  <a href="#download">Download</a>
+</div>
+
+<main id="main">
+
+<!-- ─────────────────────────────  HERO  ───────────────────────────── -->
+<section class="hero" id="top">
+  <div class="hero-grid">
+
+    <div class="hero-copy">
+      <h1 class="hero-title">
+        <span class="line" data-split>One bloom</span>
+        <span class="line"><em>away.</em></span>
+      </h1>
+
+      <p class="hero-sub">
+        A small bud sits on your desktop, out of the way. Click it and a dial opens
+        around it — every app, link, terminal profile, script, snippet and system toggle
+        you actually use, one selection from anywhere.
+      </p>
+
+      <div class="hero-actions">
+        <a href="https://github.com/Praneethreddy-github/bloom/releases" id="hero-win" class="btn btn-line btn-lg" data-magnetic>
+          Download for Windows
+        </a>
+        <a href="https://github.com/Praneethreddy-github/bloom/releases" id="hero-linux" class="btn btn-line btn-lg" data-magnetic>
+          Download for Linux
+        </a>
+      </div>
+
+      <ul class="hero-facts">
+        <li><strong>10</strong><span>action types</span></li>
+        <li><strong>17</strong><span>system toggles built in</span></li>
+        <li><strong>1</strong><span>bud, infinite rings</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-stage">
+      <div class="stage-frame">
+        <div class="stage-label"><span class="live-dot"></span> Live — click the bud, then open a folder</div>
+        <div class="dial" id="dialDemo" role="group" aria-label="Interactive Bloom dial demo"></div>
+        <div class="stage-hint" id="stageHint">Click the bud</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="scroll-cue" aria-hidden="true"><span></span></div>
+</section>
+
+<!-- ─────────────────────────────  MARQUEE  ───────────────────────────── -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Launch App</span><i>✿</i><span>Open URL</span><i>✿</i><span>Terminal Profile</span><i>✿</i>
+    <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
+    <span>Open File</span><i>✿</i><span>Custom Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i>
+    <span>Launch App</span><i>✿</i><span>Open URL</span><i>✿</i><span>Terminal Profile</span><i>✿</i>
+    <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
+    <span>Open File</span><i>✿</i><span>Custom Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i>
+  </div>
+</div>
+
+<!-- ─────────────────────────────  THE BUD  ───────────────────────────── -->
+<section class="section" id="bud">
+  <div class="head reveal">
+    <p class="kicker">01 — The bud</p>
+    <h2>Eight gestures. <em>One target.</em></h2>
+    <p class="lede">Everything Bloom does starts at a 44&nbsp;pixel bud that floats above your
+      windows at 85% opacity. It never steals focus, and it stays exactly where you put it.</p>
+  </div>
+
+  <div class="gestures reveal">
+    <article class="g-card" data-tilt><span class="g-tag">Click</span><h3>Open the dial</h3><p>The ring blooms outward, centered on the bud, wherever it happens to be sitting.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Double-click</span><h3>Dictate</h3><p>Starts voice dictation by default — or fires your starred favourite instead, your call.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Long-press</span><h3>Read aloud</h3><p>Reads your current text selection by default — or a second, separate favourite.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Drag</span><h3>Move it anywhere</h3><p>Across any monitor. It edge-snaps to the nearest border and remembers where it landed.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Scroll</span><h3>Cycle pinned</h3><p>A small chip cycles your pinned actions — click the bud to run whichever one is showing.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Middle-click</span><h3>Hide to tray</h3><p>The bud vanishes. Hotkeys keep working; the tray icon brings it back.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Right-click</span><h3>Quick menu</h3><p>Edit Actions · Settings · Pin position · Hide · Quit. No hunting through a preferences maze.</p></article>
+    <article class="g-card" data-tilt><span class="g-tag">Drop a file</span><h3>Three-node ring</h3><p>Drag any file onto the bud: Open · Open containing folder · Copy path.</p></article>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  THE DIAL  ───────────────────────────── -->
+<section class="section band" id="dial">
+  <div class="head reveal">
+    <p class="kicker">02 — The dial</p>
+    <h2>Rings on rings. <em>Nothing is ever replaced.</em></h2>
+    <p class="lede">Opening a folder doesn't swap the view out from under you. Its contents appear in a
+      new ring just outside — and the ring you came from shrinks back and dims to 35%, except for
+      the one node on the path that got you there.</p>
+  </div>
+
+  <div class="dial-explain reveal">
+    <ol class="steps">
+      <li><span class="num">1</span><div><h3>Click the bud</h3><p>Your top-level actions arrange themselves in a dial around it.</p></div></li>
+      <li><span class="num">2</span><div><h3>Open a folder</h3><p>Contents bloom into an outer ring. The layer behind dims but stays on screen.</p></div></li>
+      <li><span class="num">3</span><div><h3>Run an action</h3><p>App, URL, terminal, toggle, script, macro — whatever you put there.</p></div></li>
+      <li><span class="num">4</span><div><h3>Back out</h3><p>Click the bud, hit <kbd>Esc</kbd>, or step back exactly one layer with <kbd>↓</kbd>.</p></div></li>
+    </ol>
+
+    <figure class="rings-fig" aria-label="Diagram of nested rings">
+      <div class="rings">
+        <span class="ring r3"></span><span class="ring r2"></span><span class="ring r1"></span>
+        <span class="rings-bud"></span>
+        <span class="rings-note n1">root ring</span>
+        <span class="rings-note n2">folder opened</span>
+        <span class="rings-note n3">and again</span>
+      </div>
+    </figure>
+  </div>
+
+  <div class="keymap reveal">
+    <p class="keymap-title">Fully keyboard operable — the dial never needs a mouse.</p>
+    <div class="keys">
+      <div class="key-row">
+        <div class="key" data-k="ArrowLeft"><kbd>←</kbd><span>previous node</span></div>
+        <div class="key" data-k="ArrowRight"><kbd>→</kbd><span>next node</span></div>
+        <div class="key" data-k="ArrowUp"><kbd>↑</kbd><span>open folder</span></div>
+        <div class="key" data-k="ArrowDown"><kbd>↓</kbd><span>step back</span></div>
+      </div>
+      <div class="key-row">
+        <div class="key" data-k="Enter"><kbd>Enter</kbd><span>select</span></div>
+        <div class="key" data-k="Escape"><kbd>Esc</kbd><span>close</span></div>
+        <div class="key" data-k="Home"><kbd>Home</kbd><span>jump to root</span></div>
+        <div class="key" data-k="Digit"><kbd>0–9</kbd><span>jump to slot</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  VOICE  ───────────────────────────── -->
+<section class="section" id="voice">
+  <div class="head reveal">
+    <p class="kicker">03 — Voice, entirely local</p>
+    <h2>Speak it. Read it. <em>No internet.</em></h2>
+    <p class="lede">The Whisper model ships inside the installer and runs on your CPU. Nothing is
+      uploaded, no key to paste, no account to make. Works on a plane.</p>
+  </div>
+
+  <div class="voice-grid reveal">
+    <article class="v-card" data-tilt>
+      <div class="v-top"><span class="v-badge">Speech → Text</span><span class="v-hot"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>D</kbd></span></div>
+      <h3>Voice dictation</h3>
+      <p>Bloom captures your mic, transcribes with an embedded <code>Xenova/whisper-base.en</code>
+        model, and types the result straight at your cursor — any app, any text field.</p>
+      <div class="wave" id="voiceWave" aria-hidden="true"></div>
+      <ul class="v-list">
+        <li>Long-form safe — 30s chunks with 5s stride, so a two-minute ramble transcribes whole</li>
+        <li>Live level meter on the bud while the mic is hot</li>
+      </ul>
+    </article>
+
+    <article class="v-card" data-tilt>
+      <div class="v-top"><span class="v-badge">Text → Speech</span><span class="v-hot"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>R</kbd></span></div>
+      <h3>Read-aloud</h3>
+      <p>Select text anywhere and Bloom reads it back through your OS's own speech engine —
+        no model download, no latency, the voices you already have installed.</p>
+      <div class="v-engines">
+        <span><b>Windows</b>System.Speech</span>
+        <span><b>Linux</b>spd-say / espeak-ng</span>
+        <span><b>macOS</b>say</span>
+      </div>
+      <ul class="v-list">
+        <li>Pick any installed system voice, tune the rate</li>
+        <li>Fires again to stop mid-sentence</li>
+      </ul>
+    </article>
+  </div>
+
+  <p class="foot-note reveal"><kbd>Ctrl+Alt+D</kbd> and <kbd>Ctrl+Alt+R</kbd> are always live — completely
+    independent of whatever you've pointed the bud's double-click and long-press at.</p>
+</section>
+
+<!-- ─────────────────────────────  ACTIONS  ───────────────────────────── -->
+<section class="section band" id="actions">
+  <div class="head reveal">
+    <p class="kicker">04 — Action catalog</p>
+    <h2>If it can be triggered, <em>Bloom can bloom it.</em></h2>
+    <p class="lede">Every node in the tree is either a folder or one of these ten. Each one reports
+      back with a toast.</p>
+  </div>
+
+  <div class="act-grid reveal">
+    <article class="act" data-tilt><span class="act-n">01</span><h3>Launch App</h3><p>A searchable picker over everything installed.</p></article>
+    <article class="act" data-tilt><span class="act-n">02</span><h3>Open URL</h3><p>One link, or a whole tab group at once. Target a specific browser and profile.</p></article>
+    <article class="act" data-tilt><span class="act-n">03</span><h3>Terminal Profile</h3><p>Working directory plus an auto-run command. gnome-terminal, konsole, xfce4-terminal, or your default.</p></article>
+    <article class="act" data-tilt><span class="act-n">04</span><h3>System Toggle</h3><p>Seventeen of them — see below. Destructive ones can be flagged to ask first.</p></article>
+    <article class="act" data-tilt><span class="act-n">05</span><h3>Media Controls</h3><p>Play/pause, next, previous, volume up and down, straight through the OS media keys.</p></article>
+    <article class="act" data-tilt><span class="act-n">06</span><h3>Snippets</h3><p>Canned text, either copied to the clipboard or typed at the cursor. Email, signature, that one shell incantation.</p></article>
+    <article class="act" data-tilt><span class="act-n">07</span><h3>Open File / Folder</h3><p>Jump straight to a path in the system file manager or default app.</p></article>
+    <article class="act" data-tilt><span class="act-n">08</span><h3>Custom Script</h3><p><code>.sh</code> <code>.py</code> <code>.ps1</code> <code>.bat</code> — the escape hatch that covers everything the other nine don't.</p></article>
+    <article class="act" data-tilt><span class="act-n">09</span><h3>Webhook</h3><p>HTTP GET or POST with your own body and headers. Home Assistant, IFTTT, Zapier, your own box.</p></article>
+    <article class="act" data-tilt><span class="act-n">10</span><h3>Macro</h3><p>Chain any of the above in sequence, with timed waits between steps. "Start My Day" ships as an example.</p></article>
+  </div>
+
+  <div class="toggles reveal">
+    <h3 class="toggles-title">System toggles, built in</h3>
+    <div class="chips">
+      <span>Screenshot</span><span>Lock screen</span><span>Dark mode</span><span>Night light</span>
+      <span>Mute</span><span>Volume up</span><span>Volume down</span><span>Wi-Fi on</span><span>Wi-Fi off</span>
+      <span>Bluetooth on</span><span>Bluetooth off</span><span>Do Not Disturb on</span><span>Do Not Disturb off</span>
+      <span>Show desktop</span><span>Sleep</span><span>Restart</span><span>Shut down</span>
+    </div>
+    <p class="toggles-note">Each one maps to the native command for your OS — <code>nmcli</code>, <code>gsettings</code>,
+      <code>bluetoothctl</code>, <code>systemctl</code> on Linux; <code>netsh</code>, <code>powrprof</code>,
+      ms-settings deep links on Windows.</p>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  HOTKEYS  ───────────────────────────── -->
+<section class="section" id="keys">
+  <div class="head reveal">
+    <p class="kicker">05 — Global hotkeys</p>
+    <h2>Never touch the bud <em>at all.</em></h2>
+    <p class="lede">Four global bindings are always registered, even with the bud hidden in the tray.
+      Every one of them is rebindable.</p>
+  </div>
+
+  <div class="hk-list reveal">
+    <div class="hk"><div class="hk-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>Space</kbd></div><div class="hk-txt"><h3>Summon the dial</h3><p>Opens the ring on whichever display your cursor is on — bud visible or not.</p></div></div>
+    <div class="hk"><div class="hk-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></div><div class="hk-txt"><h3>Command palette</h3><p>Fuzzy-search every action in the tree by name and fire it. No ring navigation at all.</p></div></div>
+    <div class="hk"><div class="hk-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>D</kbd></div><div class="hk-txt"><h3>Toggle dictation</h3><p>Mic on, mic off. Text lands at the cursor when you stop.</p></div></div>
+    <div class="hk"><div class="hk-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>R</kbd></div><div class="hk-txt"><h3>Read selection</h3><p>Speaks whatever is highlighted. Press again to cut it off.</p></div></div>
+  </div>
+
+  <div class="quickfire reveal">
+    <div class="qf-copy">
+      <p class="kicker sm">Quickfire</p>
+      <h3>Any node can have its own hotkey.</h3>
+      <p>Beyond the four globals, bind a dedicated accelerator to <em>any single action</em> in your
+        tree. Your terminal on <kbd>Ctrl+Alt+T</kbd>, your work tabs on <kbd>Ctrl+Alt+W</kbd> — straight
+        to the thing, no dial in between.</p>
+    </div>
+    <div class="qf-demo" aria-hidden="true">
+      <div class="qf-row"><span class="qf-k"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd></span><span class="qf-arrow">→</span><span class="qf-target">Terminal · Projects</span></div>
+      <div class="qf-row"><span class="qf-k"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>W</kbd></span><span class="qf-arrow">→</span><span class="qf-target">Browser · Work Tabs</span></div>
+      <div class="qf-row"><span class="qf-k"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>S</kbd></span><span class="qf-arrow">→</span><span class="qf-target">System · Screenshot</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  SETTINGS  ───────────────────────────── -->
+<section class="section band" id="settings">
+  <div class="head reveal">
+    <p class="kicker">06 — Settings</p>
+    <h2>Six tabs. <em>Then get out of the way.</em></h2>
+    <p class="lede">A proper resizable window — not the transient dial — for the rare moments you
+      actually need to edit something.</p>
+  </div>
+
+  <div class="tabs reveal" id="tabs">
+    <div class="tab-rail" role="tablist" aria-label="Settings tabs">
+      <button class="tab-btn is-on" role="tab" aria-selected="true" data-tab="t-actions">Actions</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-appearance">Appearance</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-hotkeys">Hotkeys &amp; Input</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-profiles">Profiles</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-general">General &amp; Startup</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-about">About &amp; Updates</button>
+    </div>
+    <div class="tab-body">
+      <div class="tab-panel is-on" id="t-actions" role="tabpanel"><h3>Your whole tree, searchable.</h3><p>An outline of every folder and action. Drag to reorder or reparent, star a favourite, pin the ones you want on the scroll chip, and hit <strong>Run now</strong> to test any node before it ever goes live on the dial.</p></div>
+      <div class="tab-panel" id="t-appearance" role="tabpanel"><h3>One look, tuned to taste.</h3><p>Bloom keeps one considered visual identity. What you tune is size, node spacing, ring radius and gap, motion pacing and the accent colour, with a live preview beside the sliders.</p></div>
+      <div class="tab-panel" id="t-hotkeys" role="tabpanel"><h3>Rebind everything.</h3><p>All four global hotkeys, plus per-node quickfire bindings. Choose what double-click does (dictate or your favourite) and what long-press does (read aloud or a second favourite), independently. Tune hover-to-open delay, edge snapping and scroll-cycling.</p></div>
+      <div class="tab-panel" id="t-profiles" role="tabpanel"><h3>Whole setups, swapped instantly.</h3><p>Save your tree, favourites, pinned actions and appearance as a named profile, then switch between them. Work, gaming, presentation — a different dial for each context, one click apart.</p></div>
+      <div class="tab-panel" id="t-general" role="tabpanel"><h3>Startup and behaviour.</h3><p>Launch at login (on by default the first run, off in one click), tray behaviour, bud size and idle opacity, pin-in-place, and the reset-onboarding button if you want the intro tour again.</p></div>
+      <div class="tab-panel" id="t-about" role="tabpanel"><h3>Updates on your terms.</h3><p>Version, licence, and an updater that checks but never downloads behind your back — you approve every update, with a live progress readout. Pick the <strong>stable</strong> or <strong>beta</strong> channel, or turn auto-checking off entirely.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  CRAFT  ───────────────────────────── -->
+<section class="section" id="craft">
+  <div class="head reveal">
+    <p class="kicker">07 — Under it all</p>
+    <h2>The boring parts, <em>done properly.</em></h2>
+  </div>
+
+  <div class="craft-grid reveal">
+    <article class="c-card wide" data-tilt>
+      <h3>Your config cannot eat itself</h3>
+      <p>One JSON file, written atomically via a temp file and rename — a crash mid-save can never
+        leave a half-written config. Every save rolls the previous version into a backup, five deep.
+        If the live file is ever corrupt, Bloom walks the backups in order and boots from the newest
+        one that parses, then tells you which one it recovered from.</p>
+    </article>
+    <article class="c-card" data-tilt>
+      <h3>Every monitor, one space</h3>
+      <p>The overlay spans the union of all your displays, so ring coordinates are display-independent.
+        Plug in a screen, unplug it, change resolution mid-session — Bloom re-lays itself out.</p>
+    </article>
+    <article class="c-card" data-tilt>
+      <h3>Click-through when idle</h3>
+      <p>When no ring is open, the overlay ignores your mouse entirely. Toasts and the scroll chip
+        show without ever intercepting a click meant for the window underneath.</p>
+    </article>
+    <article class="c-card" data-tilt>
+      <h3>Never steals focus</h3>
+      <p>The bud and the dial float above everything without taking focus from what you're typing in.
+        Dictation types into the app you were already using.</p>
+    </article>
+    <article class="c-card" data-tilt>
+      <h3>Honest failures</h3>
+      <p>An action that fails says so, by name and reason, in a toast. No silent no-ops, no spinner
+        that never resolves.</p>
+    </article>
+    <article class="c-card" data-tilt>
+      <h3>Starts with you</h3>
+      <p>Launch-at-login is enabled once on first run and is yours to turn off. A tray icon is always
+        there to bring the bud back from hiding.</p>
+    </article>
+    <article class="c-card" data-tilt>
+      <h3>Nothing phones home</h3>
+      <p>No telemetry, no account, no cloud. The only network call Bloom ever makes is the update
+        check you can switch off.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  DOWNLOAD  ───────────────────────────── -->
+<section class="section band" id="download">
+  <div class="head reveal">
+    <p class="kicker">08 — Get Bloom</p>
+    <h2>Grab the build <em>for your desktop.</em></h2>
+    <p class="lede">The Whisper voice model and the Linux window tooling are bundled into the
+      installer. Nothing else to download, nothing to configure.</p>
+  </div>
+
+  <div class="dl reveal">
+    <div class="dl-cards">
+      <a id="btn-win" href="https://github.com/Praneethreddy-github/bloom/releases" class="dl-card" data-magnetic>
+        <svg viewBox="0 0 20 20" width="26" height="26" fill="currentColor" aria-hidden="true"><rect x="0" y="0" width="9" height="9" rx="1"/><rect x="11" y="0" width="9" height="9" rx="1"/><rect x="0" y="11" width="9" height="9" rx="1"/><rect x="11" y="11" width="9" height="9" rx="1"/></svg>
+        <span class="dl-name">Windows</span>
+        <span class="dl-sub" id="win-sub">.exe installer</span>
+        <span class="dl-go">Download →</span>
+      </a>
+      <a id="btn-linux-deb" href="https://github.com/Praneethreddy-github/bloom/releases" class="dl-card" data-magnetic>
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4 3 12l5 8M16 4l5 8-5 8M13 3l-2 18"/></svg>
+        <span class="dl-name">Linux</span>
+        <span class="dl-sub" id="deb-sub">.deb package</span>
+        <span class="dl-go">Download →</span>
+      </a>
+    </div>
+
+    <p class="dl-alt">Prefer a portable build? <a id="btn-appimage" href="https://github.com/Praneethreddy-github/bloom/releases">Grab the .AppImage</a>.
+      <span id="dl-version" class="dl-version"></span></p>
+
+    <div class="dl-src">
+      <p class="dl-src-title">Or build it yourself</p>
+      <pre><code><span class="c">git</span> clone https://github.com/Praneethreddy-github/bloom.git
+<span class="c">cd</span> bloom
+<span class="c">npm</span> install
+<span class="c">npm</span> start          <span class="m"># launch Bloom</span>
+<span class="c">npm</span> run dist:linux <span class="m"># or dist:win / dist:mac</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  CLOSER  ───────────────────────────── -->
+<section class="closer">
+  <div class="closer-inner reveal">
+    <div class="closer-mark" id="closerMark"></div>
+    <h2>One bud. <em>Everything you do.</em></h2>
+    <a href="#download" class="btn btn-solid btn-lg" data-magnetic>Download Bloom</a>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="f-brand">
+      <span class="brand-mark sm" id="footMark"></span>
+      <div><strong>Bloom</strong><p>One bloom away.</p></div>
+    </div>
+    <nav class="f-links" aria-label="Footer">
+      <a href="https://github.com/Praneethreddy-github/bloom" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Praneethreddy-github/bloom/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/Praneethreddy-github/bloom/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/Praneethreddy-github/bloom/blob/main/LICENSE" target="_blank" rel="noopener">MIT Licence</a>
+    </nav>
+  </div>
+  <div class="footer-bar">
+    <p>© <span id="year"></span> Bloom · MIT licensed · Built with Electron</p>
+    <button id="motionToggle" class="motion-toggle" aria-pressed="false">Petals: on</button>
+  </div>
+</footer>
+
+<script src="app.js"></script>
 </body>
 </html>
