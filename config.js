@@ -23,29 +23,28 @@ function defaultTree() {
       {
         id: 'apps', type: 'folder', label: 'Apps', icon: 'grid', color: '#5EEAD4', children: [
           { id: 'files', type: 'launch_app', label: 'Files', icon: 'folder', params: { command: L ? 'xdg-open ~' : 'explorer.exe %USERPROFILE%' } },
-          { id: 'editor', type: 'launch_app', label: 'Text Editor', icon: 'pencil', params: { command: L ? 'gedit || xdg-open ~' : 'notepad.exe' } },
-          { id: 'calc', type: 'launch_app', label: 'Calculator', icon: 'cpu', params: { command: L ? 'gnome-calculator' : 'calc.exe' } },
+          { id: 'vscode', type: 'launch_app', label: 'VS Code', icon: 'code', params: { command: 'code' } },
+          { id: 'calc', type: 'launch_app', label: 'Calculator', icon: 'plus', params: { command: L ? 'gnome-calculator' : 'calc.exe' } },
           { id: 'sysmon', type: 'launch_app', label: 'System Monitor', icon: 'activity', params: { command: L ? 'gnome-system-monitor' : 'taskmgr.exe' } }
         ]
       },
       {
         id: 'browser', type: 'folder', label: 'Browser', icon: 'globe', color: '#7DD3FC', children: [
-          { id: 'newtab', type: 'open_url', label: 'New Tab', icon: 'plus', params: { urls: ['https://www.google.com'], browser: 'default' } },
-          { id: 'worktabs', type: 'open_url', label: 'Work Tabs', icon: 'briefcase', params: { urls: ['https://mail.google.com', 'https://calendar.google.com'], browser: 'default' } },
-          { id: 'github', type: 'open_url', label: 'GitHub', icon: 'code', params: { urls: ['https://github.com'], browser: 'default' } },
-          { id: 'yt', type: 'open_url', label: 'YouTube', icon: 'play', params: { urls: ['https://youtube.com'], browser: 'default' } }
+          { id: 'newtab', type: 'open_url', label: 'New Tab', icon: 'plus', params: { urls: ['https://www.google.com'] } },
+          { id: 'worktabs', type: 'open_url', label: 'Work Tabs', icon: 'briefcase', params: { urls: ['https://outlook.office.com', 'https://jira.atlassian.com'] } },
+          { id: 'github', type: 'open_url', label: 'GitHub', icon: 'code', params: { urls: ['https://github.com'] } },
+          { id: 'yt', type: 'open_url', label: 'YouTube', icon: 'play', params: { urls: ['https://youtube.com'] } }
         ]
       },
       {
         id: 'terminal', type: 'folder', label: 'Terminal', icon: 'terminal', color: '#A78BFA', children: [
           { id: 'term-home', type: 'terminal', label: 'Home', icon: 'home', params: { cwd: '~', command: '', terminal: 'default' } },
-          { id: 'term-proj', type: 'terminal', label: 'Projects', icon: 'folder-open', params: { cwd: '~/projects', command: '', terminal: 'default' } },
+          { id: 'term-down', type: 'terminal', label: 'Downloads', icon: 'download', params: { cwd: '~/Downloads', command: '', terminal: 'default' } },
           { id: 'term-top', type: 'terminal', label: 'Processes', icon: 'activity', params: { cwd: '~', command: L ? 'htop || top' : '', terminal: 'default' } }
         ]
       },
       {
         id: 'system', type: 'folder', label: 'System', icon: 'monitor', color: '#F472B6', children: [
-          { id: 'screenshot', type: 'system_toggle', label: 'Screenshot', icon: 'camera', params: { toggle: 'screenshot' } },
           { id: 'lock', type: 'system_toggle', label: 'Lock Screen', icon: 'lock', params: { toggle: 'lock' } },
           { id: 'darkmode', type: 'system_toggle', label: 'Dark Mode', icon: 'moon', params: { toggle: 'dark_theme' } },
           { id: 'nightlight', type: 'system_toggle', label: 'Night Light', icon: 'sun', params: { toggle: 'night_light' } },
@@ -63,18 +62,18 @@ function defaultTree() {
         ]
       },
       {
-        id: 'snippets', type: 'folder', label: 'Snippets', icon: 'clipboard', color: '#34D399', children: [
-          { id: 'snip-shrug', type: 'snippet', label: 'Shrug', icon: 'sparkle', params: { text: '¯\\_(ツ)_/¯', mode: 'copy' } },
-          { id: 'snip-mail', type: 'snippet', label: 'My Email', icon: 'mail', params: { text: 'you@example.com', mode: 'copy' } },
-          { id: 'snip-bloom', type: 'snippet', label: 'Bloom Sig', icon: 'bloom', params: { text: '— sent one bloom away 🌸', mode: 'copy' } }
+        id: 'snippets', type: 'folder', label: 'Snippets', icon: 'snippet', color: '#34D399', children: [
+          { id: 'snip-address', type: 'snippet', label: 'My Address', icon: 'home', params: { text: 'No.123, 12th Main, Bloom St, Bloom -560016', mode: 'copy' } },
+          { id: 'snip-zoom', type: 'snippet', label: 'Zoom Room', icon: 'video', params: { text: 'https://zoom.in', mode: 'copy' } },
+          { id: 'snip-phone', type: 'snippet', label: 'Phone No.', icon: 'phone', params: { text: '+91 9019919191', mode: 'copy' } }
         ]
       },
       {
         id: 'start-day', type: 'macro', label: 'Start My Day', icon: 'zap', color: '#FB923C', params: {
           steps: [
-            { action: 'open_url', urls: ['https://mail.google.com'], browser: 'default' },
+            { action: 'open_url', urls: ['https://outlook.office.com'] },
             { action: 'wait', ms: 1200 },
-            { action: 'open_url', urls: ['https://calendar.google.com'], browser: 'default' }
+            { action: 'open_url', urls: ['https://jira.atlassian.com'] }
           ]
         }
       },

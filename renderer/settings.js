@@ -898,9 +898,9 @@
     { type: 'launch_app', name: 'Launch App', icon: 'grid', desc: 'Start or focus an application' },
     { type: 'open_url', name: 'Open URL', icon: 'globe', desc: 'One or more sites, in any browser' },
     { type: 'terminal', name: 'Terminal', icon: 'terminal', desc: 'Open a shell profile, run a command' },
-    { type: 'system_toggle', name: 'System Toggle', icon: 'monitor', desc: 'Lock, screenshot, dark mode…' },
+    { type: 'system_toggle', name: 'System Toggle', icon: 'monitor', desc: 'Lock, dark mode, sleep…' },
     { type: 'media', name: 'Media', icon: 'music', desc: 'Play, pause, skip, volume' },
-    { type: 'snippet', name: 'Snippet', icon: 'clipboard', desc: 'Copy or type saved text' },
+    { type: 'snippet', name: 'Snippet', icon: 'snippet', desc: 'Copy or type saved text' },
     { type: 'open_path', name: 'Open Path', icon: 'folder-open', desc: 'Jump to a file or folder' },
     { type: 'script', name: 'Script', icon: 'code', desc: 'Run your own .sh / .py / .ps1' },
     { type: 'webhook', name: 'Webhook', icon: 'link', desc: 'Call a URL — GET or POST' },
@@ -909,7 +909,7 @@
   ];
   const SWATCHES = ['#5EEAD4', '#7DD3FC', '#A78BFA', '#F472B6', '#FB923C', '#FBBF24', '#34D399'];
   const TOGGLES = {
-    screenshot: 'Screenshot', lock: 'Lock screen', dark_theme: 'Dark theme', night_light: 'Night light',
+    lock: 'Lock screen', dark_theme: 'Dark theme', night_light: 'Night light',
     mute: 'Mute', volume_up: 'Volume up', volume_down: 'Volume down', wifi_on: 'Wi-Fi on', wifi_off: 'Wi-Fi off',
     bt_on: 'Bluetooth on', bt_off: 'Bluetooth off', dnd_on: 'Do Not Disturb on', dnd_off: 'Do Not Disturb off',
     show_desktop: 'Show desktop', sleep: 'Sleep', restart: 'Restart', shutdown: 'Shut down'
@@ -1044,9 +1044,9 @@
         case 'launch_app': return { command: '', focusIfRunning: true };
         case 'open_url': return { urls: [], browser: 'default', profile: '', newWindow: false };
         case 'terminal': return { cwd: '', command: '', terminal: 'default', admin: false };
-        case 'system_toggle': return { toggle: 'screenshot' };
+        case 'system_toggle': return { toggle: 'lock' };
         case 'media': return { key: 'playpause' };
-        case 'snippet': return { text: '', mode: 'copy' };
+        case 'snippet': return { text: 'Hello, this is a custom snippet!', mode: 'copy' };
         case 'open_path': return { path: '' };
         case 'script': return { file: '', args: '' };
         case 'webhook': return { url: '', method: 'GET', body: '' };
@@ -1076,8 +1076,6 @@
           <div class="f-field"><label for="wp-urls">URLs — one per line</label>
             <textarea id="wp-urls" class="in mono" data-p="urls" placeholder="https://example.com">${esc((p.urls || []).join('\n'))}</textarea>
             <span class="hint-err" data-err="urls" hidden>Every line must start with http:// or https://</span></div>
-          <div class="f-field"><label for="wp-browser">Browser</label>
-            <select id="wp-browser" class="sel" data-p="browser">${BROWSERS.map(b => `<option value="${b}" ${p.browser === b ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
           <div class="f-field" id="wp-profile-wrap"><label for="wp-profile">Profile</label>
             <input id="wp-profile" class="in" data-p="profile" value="${esc(p.profile || '')}" placeholder="Profile 1"></div>
           <label class="f-inline"><span class="tgl"><input type="checkbox" data-p="newWindow" ${p.newWindow ? 'checked' : ''}><span class="knob"></span></span>
@@ -1089,26 +1087,24 @@
           <div class="f-field"><label for="wp-cmd">Command <span class="hint">(runs after opening)</span></label>
             <input id="wp-cmd" class="in mono" data-p="command" value="${esc(p.command || '')}" placeholder="npm run dev"></div>
           <div class="f-field"><label for="wp-term">Terminal</label>
-            <select id="wp-term" class="sel" data-p="terminal">${TERMINALS.map(x => `<option value="${x}" ${p.terminal === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+            <select id="wp-term" class="in sel" data-p="terminal">${TERMINALS.map(x => `<option value="${x}" ${p.terminal === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
           <label class="f-inline"><span class="tgl"><input type="checkbox" data-p="admin" ${p.admin ? 'checked' : ''}><span class="knob"></span></span>
             <span>Elevated (asks every time)</span></label>
           <div class="note warn" data-admin-note ${p.admin ? '' : 'hidden'}>Elevated commands always show a confirmation dialog before running.</div>`;
       } else if (t === 'system_toggle') {
         html += `
           <div class="f-field"><label for="wp-toggle">Toggle</label>
-            <select id="wp-toggle" class="sel" data-p="toggle">${Object.entries(TOGGLES).map(([v, l]) => `<option value="${v}" ${p.toggle === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+            <select id="wp-toggle" class="in sel" data-p="toggle">${Object.entries(TOGGLES).map(([v, l]) => `<option value="${v}" ${p.toggle === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
           <div class="note warn" data-confirm-note ${CONFIRM_TOGGLES.includes(p.toggle) ? '' : 'hidden'}>Always asks for confirmation.</div>`;
       } else if (t === 'media') {
         html += `
           <div class="f-field"><label for="wp-key">Media key</label>
-            <select id="wp-key" class="sel" data-p="key">${Object.entries(MEDIA_KEYS).map(([v, l]) => `<option value="${v}" ${p.key === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+            <select id="wp-key" class="in sel" data-p="key">${Object.entries(MEDIA_KEYS).map(([v, l]) => `<option value="${v}" ${p.key === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
       } else if (t === 'snippet') {
         html += `
           <div class="f-field"><label for="wp-text">Text</label>
             <textarea id="wp-text" class="in" data-p="text" placeholder="Your snippet…">${esc(p.text || '')}</textarea></div>
-          <div class="f-field"><label>Mode</label>
-            <label class="f-inline"><input type="radio" name="wp-mode" value="copy" ${p.mode !== 'paste' ? 'checked' : ''}> Copy to clipboard</label>
-            <label class="f-inline"><input type="radio" name="wp-mode" value="paste" ${p.mode === 'paste' ? 'checked' : ''}> Type at cursor (best effort)</label></div>`;
+          <div class="note">Copies this text to your clipboard when the action runs.</div>`;
       } else if (t === 'open_path') {
         html += `
           <div class="f-field"><label for="wp-path">Path</label>
@@ -1128,7 +1124,7 @@
             <input id="wp-url" class="in mono" data-p="url" value="${esc(p.url || '')}" placeholder="https://hooks.example.com/fire">
             <span class="hint-err" data-err="url" hidden>Must start with http:// or https://</span></div>
           <div class="f-field"><label for="wp-method">Method</label>
-            <select id="wp-method" class="sel" data-p="method">
+            <select id="wp-method" class="in sel" data-p="method">
               <option value="GET" ${p.method !== 'POST' ? 'selected' : ''}>GET</option>
               <option value="POST" ${p.method === 'POST' ? 'selected' : ''}>POST</option></select></div>
           <div class="f-field" id="wp-body-wrap" ${p.method === 'POST' ? '' : 'hidden'}><label for="wp-hbody">Body</label>
@@ -1142,7 +1138,7 @@
       } else if (t === 'bloom') {
         html += `
           <div class="f-field"><label for="wp-cmd2">Command</label>
-            <select id="wp-cmd2" class="sel" data-p="cmd">
+            <select id="wp-cmd2" class="in sel" data-p="cmd">
               <option value="settings" ${p.cmd !== 'palette' ? 'selected' : ''}>Open this settings window</option>
               <option value="palette" ${p.cmd === 'palette' ? 'selected' : ''}>Open the command palette</option></select></div>`;
       }
@@ -1194,15 +1190,15 @@
           case 'open_url': return `<textarea class="in mono" data-urls placeholder="https://… one per line">${esc((s.urls || []).join('\n'))}</textarea>`;
           case 'launch_app': return `<input class="in mono" data-cmd value="${esc(s.command || '')}" placeholder="firefox" aria-label="Command">`;
           case 'terminal': return `<input class="in mono" data-cwd value="${esc(s.cwd || '')}" placeholder="~/projects" aria-label="Directory"><input class="in mono" data-cmd value="${esc(s.command || '')}" placeholder="command" aria-label="Command">`;
-          case 'system_toggle': return `<select class="sel" data-tg>${Object.entries(TOGGLES).map(([v, l]) => `<option value="${v}" ${s.toggle === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-          case 'snippet': return `<input class="in" data-txt value="${esc(s.text || '')}" placeholder="text" aria-label="Snippet text"><select class="sel" data-md><option value="copy" ${s.mode !== 'paste' ? 'selected' : ''}>Copy</option><option value="paste" ${s.mode === 'paste' ? 'selected' : ''}>Paste</option></select>`;
+          case 'system_toggle': return `<select class="in sel" data-tg>${Object.entries(TOGGLES).map(([v, l]) => `<option value="${v}" ${s.toggle === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+          case 'snippet': return `<input class="in" data-txt value="${esc(s.text || '')}" placeholder="text" aria-label="Snippet text">`;
           default: return '';
         }
       }
       function draw() {
         wrap.innerHTML = steps.map((s, i) => `
           <div class="macro-step" data-i="${i}">
-            <select class="sel" data-st aria-label="Step type">${Object.entries(STEP_TYPES).map(([v, l]) => `<option value="${v}" ${s.action === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+            <select class="in sel" data-st aria-label="Step type">${Object.entries(STEP_TYPES).map(([v, l]) => `<option value="${v}" ${s.action === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
             <div class="ms-fields">${fieldsFor(s, i)}</div>
             <div class="ms-btns">
               <button class="icon-btn" data-mup title="Move up">${icon('chevron-up', 13)}</button>
@@ -1226,8 +1222,8 @@
           case 'open_url': return { action, urls: [], browser: 'default' };
           case 'launch_app': return { action, command: '' };
           case 'terminal': return { action, cwd: '', command: '' };
-          case 'system_toggle': return { action, toggle: 'screenshot' };
-          case 'snippet': return { action, text: '', mode: 'copy' };
+          case 'system_toggle': return { action, toggle: 'lock' };
+          case 'snippet': return { action, text: '' };
         }
       }
       function syncStep(row, s) {
@@ -1237,7 +1233,7 @@
         else if (s.action === 'launch_app') s.command = g('[data-cmd]') || '';
         else if (s.action === 'terminal') { s.cwd = g('[data-cwd]') || ''; s.command = g('[data-cmd]') || ''; }
         else if (s.action === 'system_toggle') s.toggle = g('[data-tg]');
-        else if (s.action === 'snippet') { s.text = g('[data-txt]') || ''; s.mode = g('[data-md]') || 'copy'; }
+        else if (s.action === 'snippet') { s.text = g('[data-txt]') || ''; }
       }
       $('#macro-add', body).addEventListener('click', () => { steps.push(freshStep('launch_app')); draw(); });
       draw();
@@ -1282,8 +1278,6 @@
         p.key = val('[data-p=key]');
       } else if (t === 'snippet') {
         p.text = val('[data-p=text]') || '';
-        const m = root.querySelector('input[name=wp-mode]:checked');
-        p.mode = m ? m.value : 'copy';
       } else if (t === 'open_path') {
         p.path = (val('[data-p=path]') || '').trim();
         if (!p.path) return fail('path', '[data-p=path]');
@@ -2249,4 +2243,270 @@
     switchTab(TABS.includes(saved) ? saved : 'actions');
   }
   window.addEventListener('DOMContentLoaded', boot);
+})();
+
+// ---- Custom dropdown engine (BloomSelect) ----
+// Auto-upgrades every <select> into a styled in-app dropdown.
+// The hidden native <select> is kept for value & event compatibility.
+(function () {
+  'use strict';
+
+  let openInstance = null; // only one dropdown open at a time
+
+  function closeAll() {
+    if (openInstance) {
+      openInstance.wrapper.classList.remove('open');
+      openInstance.menu.classList.remove('visible');
+      openInstance.trigger.setAttribute('aria-expanded', 'false');
+      openInstance = null;
+    }
+  }
+
+  // Position the fixed menu relative to the trigger
+  function positionMenu(wrapper, menu) {
+    const rect = wrapper.querySelector('.bloom-select-trigger').getBoundingClientRect();
+    const menuH = menu.scrollHeight;
+    const viewH = window.innerHeight;
+    // Default: below the trigger
+    let top = rect.bottom + 4;
+    let goUp = false;
+    if (top + Math.min(menuH, 260) > viewH - 8) {
+      // Flip above
+      top = rect.top - Math.min(menuH, 260) - 4;
+      goUp = true;
+      if (top < 8) top = 8;
+    }
+    menu.style.top = top + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.minWidth = rect.width + 'px';
+    // Adjust transform origin for animation
+    menu.style.transformOrigin = goUp ? 'bottom left' : 'top left';
+  }
+
+  function upgradeSelect(sel) {
+    if (sel.classList.contains('bloom-upgraded')) return;
+    sel.classList.add('bloom-upgraded');
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'bloom-select';
+    // Copy inline style width from the select if present
+    if (sel.style.width) wrapper.style.width = sel.style.width;
+    if (sel.style.minWidth) wrapper.style.minWidth = sel.style.minWidth;
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'bloom-select-trigger';
+    trigger.setAttribute('tabindex', '0');
+    trigger.setAttribute('role', 'combobox');
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+
+    const menu = document.createElement('div');
+    menu.className = 'bloom-select-menu';
+    menu.setAttribute('role', 'listbox');
+
+    // Link menu <-> wrapper for cleanup
+    const uid = 'bs-' + Math.random().toString(36).slice(2, 10);
+    wrapper.dataset.bsId = uid;
+    menu.dataset.bsOwner = uid;
+
+    // Insert wrapper in the select's position
+    sel.parentNode.insertBefore(wrapper, sel);
+    wrapper.appendChild(sel);
+    wrapper.appendChild(trigger);
+
+    // The menu lives in the body (fixed positioning)
+    document.body.appendChild(menu);
+
+    let focusedIdx = -1;
+
+    function buildOptions() {
+      const options = Array.from(sel.options);
+      menu.innerHTML = '';
+      options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'bloom-select-option' + (opt.selected ? ' active' : '');
+        div.setAttribute('role', 'option');
+        div.setAttribute('data-value', opt.value);
+        div.textContent = opt.textContent;
+        div.addEventListener('mouseenter', () => {
+          clearFocused();
+          focusedIdx = i;
+          div.classList.add('focused');
+        });
+        div.addEventListener('mouseleave', () => {
+          div.classList.remove('focused');
+        });
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectOption(opt.value);
+        });
+        menu.appendChild(div);
+      });
+      updateLabel();
+    }
+
+    function updateLabel() {
+      const selected = sel.options[sel.selectedIndex];
+      trigger.textContent = selected ? selected.textContent : '';
+    }
+
+    function selectOption(value) {
+      if (sel.value !== value) {
+        sel.value = value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      buildOptions();
+      closeAll();
+      trigger.focus();
+    }
+
+    function clearFocused() {
+      menu.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
+    }
+
+    function toggleOpen() {
+      const isOpen = wrapper.classList.contains('open');
+      closeAll();
+      if (!isOpen) {
+        buildOptions();
+        positionMenu(wrapper, menu);
+        wrapper.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        // Trigger reflow then show
+        void menu.offsetHeight;
+        menu.classList.add('visible');
+        openInstance = { wrapper, menu, trigger };
+        // Focus current value
+        focusedIdx = sel.selectedIndex;
+        const items = menu.querySelectorAll('.bloom-select-option');
+        if (items[focusedIdx]) {
+          items[focusedIdx].classList.add('focused');
+          items[focusedIdx].scrollIntoView({ block: 'nearest' });
+        }
+      }
+    }
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleOpen();
+    });
+
+    // Keyboard navigation
+    trigger.addEventListener('keydown', (e) => {
+      const items = menu.querySelectorAll('.bloom-select-option');
+      const isOpen = wrapper.classList.contains('open');
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (isOpen && focusedIdx >= 0 && items[focusedIdx]) {
+          selectOption(items[focusedIdx].dataset.value);
+        } else {
+          toggleOpen();
+        }
+      } else if (e.key === 'Escape') {
+        if (isOpen) { e.preventDefault(); closeAll(); trigger.focus(); }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!isOpen) { toggleOpen(); return; }
+        clearFocused();
+        focusedIdx = Math.min(focusedIdx + 1, items.length - 1);
+        if (items[focusedIdx]) { items[focusedIdx].classList.add('focused'); items[focusedIdx].scrollIntoView({ block: 'nearest' }); }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!isOpen) { toggleOpen(); return; }
+        clearFocused();
+        focusedIdx = Math.max(focusedIdx - 1, 0);
+        if (items[focusedIdx]) { items[focusedIdx].classList.add('focused'); items[focusedIdx].scrollIntoView({ block: 'nearest' }); }
+      } else if (e.key === 'Home') {
+        if (isOpen) { e.preventDefault(); clearFocused(); focusedIdx = 0; if (items[0]) { items[0].classList.add('focused'); items[0].scrollIntoView({ block: 'nearest' }); } }
+      } else if (e.key === 'End') {
+        if (isOpen) { e.preventDefault(); clearFocused(); focusedIdx = items.length - 1; const last = items[items.length - 1]; if (last) { last.classList.add('focused'); last.scrollIntoView({ block: 'nearest' }); } }
+      } else if (e.key === 'Tab') {
+        closeAll();
+      }
+    });
+
+    // Sync if the native select's value/options change programmatically
+    const syncObserver = new MutationObserver(() => { buildOptions(); });
+    syncObserver.observe(sel, { childList: true, subtree: true, attributes: true, attributeFilter: ['selected'] });
+
+    // Re-sync label when the select value changes (including programmatic changes)
+    sel.addEventListener('change', () => { buildOptions(); });
+
+    buildOptions();
+  }
+
+  // Upgrade all existing selects
+  function upgradeAll(root) {
+    (root || document).querySelectorAll('select:not(.bloom-upgraded)').forEach(upgradeSelect);
+  }
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (openInstance && !openInstance.wrapper.contains(e.target) && !openInstance.menu.contains(e.target)) {
+      closeAll();
+    }
+  });
+
+  // Close on scroll of content area (if select is in a scrollable pane)
+  document.addEventListener('scroll', () => {
+    if (openInstance) {
+      positionMenu(openInstance.wrapper, openInstance.menu);
+    }
+  }, true);
+
+  // Close on window resize
+  window.addEventListener('resize', closeAll);
+
+  // Clean up orphaned menus whose wrapper has been removed from the DOM
+  function cleanOrphanedMenus() {
+    document.querySelectorAll('.bloom-select-menu[data-bs-owner]').forEach(menu => {
+      const owner = document.querySelector(`.bloom-select[data-bs-id="${menu.dataset.bsOwner}"]`);
+      if (!owner || !document.body.contains(owner)) {
+        if (openInstance && openInstance.menu === menu) openInstance = null;
+        menu.remove();
+      }
+    });
+  }
+
+  // Observe DOM for dynamically added selects and removed wrappers
+  const observer = new MutationObserver((mutations) => {
+    let found = false;
+    let removed = false;
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType === 1) {
+          if (node.tagName === 'SELECT' && !node.classList.contains('bloom-upgraded')) { found = true; break; }
+          if (node.querySelectorAll && node.querySelectorAll('select:not(.bloom-upgraded)').length) { found = true; break; }
+        }
+      }
+      for (const node of m.removedNodes) {
+        if (node.nodeType === 1 && (node.classList?.contains('bloom-select') ||
+            (node.querySelectorAll && node.querySelectorAll('.bloom-select').length))) {
+          removed = true;
+        }
+      }
+      if (found) break;
+    }
+    if (found) {
+      requestAnimationFrame(() => upgradeAll());
+    }
+    if (removed) {
+      requestAnimationFrame(cleanOrphanedMenus);
+    }
+  });
+
+  // Start observing after DOM is ready
+  const init = () => {
+    upgradeAll();
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

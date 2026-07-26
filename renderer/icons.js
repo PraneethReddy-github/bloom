@@ -29,6 +29,7 @@
     'wifi': '<path d="M2.5 9.3a14 14 0 0 1 19 0"/><path d="M5.8 12.8a9.5 9.5 0 0 1 12.4 0"/><path d="M9.2 16.2a5 5 0 0 1 5.6 0"/><path d="M12 19.4h.01"/>',
     'bluetooth': '<path d="M7 7.5l10 9L12 21V3l5 4.5-10 9"/>',
     'clipboard': '<rect x="5" y="4.5" width="14" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="4" rx="1.2"/><path d="M9 11.5h6M9 15.5h4"/>',
+    'snippet': '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     'file': '<path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z"/><path d="M14 2.5V8h5.5"/>',
     'mail': '<rect x="2.5" y="5" width="19" height="14" rx="2"/><polyline points="3.5 7.5 12 13.5 20.5 7.5"/>',
     'calendar': '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/>',

@@ -734,22 +734,11 @@ async function systemToggle(params) {
   }
   const L = !IS_WIN;
   switch (t) {
-    case 'screenshot': {
-      if (IS_WIN) return launch('explorer ms-screenclip:');
-      const tool = firstBin(['gnome-screenshot', 'spectacle', 'flameshot']);
-      if (tool === 'gnome-screenshot') return launch('gnome-screenshot -i');
-      if (tool === 'spectacle') return launch('spectacle');
-      if (tool === 'flameshot') return launch('flameshot gui');
-      const dest = path.join(os.homedir(), 'Pictures');
-      fs.mkdirSync(dest, { recursive: true });
-      const file = path.join(dest, `bloom-${Date.now()}.png`);
-      const r = await run(`import -window root "${file}"`);
-      return r.ok ? { ok: true, note: `Saved ${file}` } : r;
-    }
     case 'lock':
       if (IS_WIN) return run('rundll32.exe user32.dll,LockWorkStation');
-      if (hasBin('loginctl')) return run('loginctl lock-session');
-      return run('xdg-screensaver lock');
+      return run('dbus-send --type=method_call --dest=org.gnome.ScreenSaver /org/gnome/ScreenSaver org.gnome.ScreenSaver.Lock')
+        .then(r => r.ok ? r : run('dbus-send --type=method_call --dest=org.freedesktop.ScreenSaver /ScreenSaver org.freedesktop.ScreenSaver.Lock'))
+        .then(r => r.ok ? r : run('loginctl lock-session'));
     case 'dark_theme':
       if (IS_WIN) return run(`powershell -c "$k='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize'; $v=(Get-ItemProperty -Path $k -Name AppsUseLightTheme).AppsUseLightTheme; $n=1-$v; Set-ItemProperty -Path $k -Name AppsUseLightTheme -Value $n; Set-ItemProperty -Path $k -Name SystemUsesLightTheme -Value $n"`);
       return gsettingsFlip('org.gnome.desktop.interface', 'color-scheme', "'prefer-dark'", "'default'");
@@ -779,7 +768,7 @@ async function systemToggle(params) {
       if (hasBin('wmctrl')) return run('wmctrl -k on');
       if (hasBin('xdotool')) return run('xdotool key super+d');
       return { ok: false, error: 'needs wmctrl or xdotool' };
-    case 'sleep': return IS_WIN ? run('rundll32.exe powrprof.dll,SetSuspendState 0,1,0') : run('systemctl suspend');
+    case 'sleep': return IS_WIN ? run('powershell.exe -NoProfile -Command "Add-Type -Assembly System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState(\'Suspend\', $false, $false)"') : run('systemctl suspend');
     case 'restart': return IS_WIN ? run('shutdown /r /t 0') : run('systemctl reboot');
     case 'shutdown': return IS_WIN ? run('shutdown /s /t 0') : run('systemctl poweroff');
     default: return { ok: false, error: `unknown toggle "${t}"` };
@@ -829,11 +818,7 @@ async function execute(node) {
       case 'media': result = await mediaKey(p); break;
       case 'snippet': {
         clipboard.writeText(p.text || '');
-        if (p.mode === 'paste') {
-          if (IS_WIN) { await sleep(120); await run(`powershell -c "$w=New-Object -ComObject WScript.Shell; $w.SendKeys('^v')"`); }
-          else if (hasBin('xdotool')) { await sleep(120); await run('xdotool key --clearmodifiers ctrl+v'); }
-        }
-        result = { ok: true, note: p.mode === 'paste' ? 'Pasted' : 'Copied to clipboard' };
+        result = { ok: true, note: 'Copied to clipboard' };
         break;
       }
       case 'open_path': {

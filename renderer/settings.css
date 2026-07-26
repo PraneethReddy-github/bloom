@@ -191,33 +191,129 @@ h2.sec .tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-
 .mono { font-family: ui-monospace, 'SF Mono', 'Consolas', monospace; font-size: 12px; }
 
 /* ---- inputs ---- */
-/* NOTE: the dropdown rules are scoped to `select` on purpose — `.sel` is also
-   the "selected" state class on cards, icon cells and search rows, and an
-   unscoped `.sel` was stamping input geometry (height: 32px) onto all of them. */
-.in, select.sel, textarea.in {
+/* NOTE: the dropdown rules are now universally applied to `select` */
+.in, textarea.in {
   background: var(--elev); border: 1px solid var(--line);
   border-radius: var(--r-ctl); color: var(--ink);
   padding: 6px 10px; height: 32px; min-width: 0;
   transition: border-color var(--t), background var(--t);
 }
 textarea.in { height: auto; min-height: 84px; resize: vertical; line-height: 1.5; padding: 8px 10px; }
-.in:focus, select.sel:focus, textarea.in:focus { border-color: var(--acc); background: var(--elev-hi); }
+.in:focus, textarea.in:focus { border-color: var(--acc); background: var(--elev-hi); }
 .in.err { border-color: var(--danger); }
 .in::placeholder, textarea.in::placeholder { color: var(--ink-faint); }
 
-select.sel {
-  appearance: none; -webkit-appearance: none; padding-right: 30px; cursor: pointer;
-  font-size: 12.5px; text-overflow: ellipsis;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238c8c8c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9.5 12 15.5 18 9.5'/></svg>");
-  background-repeat: no-repeat; background-position: right 10px center;
+/* Hidden native select (kept for value & events) */
+select.bloom-upgraded {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  overflow: hidden !important; clip: rect(0,0,0,0) !important; border: 0 !important;
+  pointer-events: none !important; opacity: 0 !important;
 }
-select.sel:hover { background-color: var(--elev-hi); border-color: var(--line-strong); }
-select.sel:focus {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ededed' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 14.5 12 8.5 18 14.5'/></svg>");
+/* Fallback for un-upgraded selects (briefly visible on load) */
+select:not(.bloom-upgraded) {
+  appearance: none; -webkit-appearance: none; padding: 6px 30px 6px 12px; cursor: pointer;
+  font-size: 13px; font-weight: 500; text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  background-color: var(--elev); border: 1px solid var(--line);
+  border-radius: var(--r-ctl); color: var(--ink);
+  height: 32px; min-width: 0;
+  transition: border-color var(--t), background var(--t), box-shadow var(--t);
+}
+
+/* ---- Custom dropdown (.bloom-select) ---- */
+.bloom-select {
+  position: relative; display: inline-flex; vertical-align: middle;
+}
+.bloom-select-trigger {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 28px 5px 11px; cursor: pointer;
+  font-size: 13px; font-weight: 500; line-height: 20px;
+  white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+  background: var(--elev); border: 1px solid var(--line);
+  border-radius: var(--r-ctl); color: var(--ink);
+  height: 32px; min-width: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  transition: border-color var(--t), background var(--t), box-shadow var(--t);
+  position: relative;
+}
+.bloom-select-trigger::after {
+  content: ''; position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat;
+  transition: transform 0.2s ease;
+}
+.bloom-select.open .bloom-select-trigger::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+.bloom-select-trigger:hover {
+  background: var(--elev-hi); border-color: var(--line-strong);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.bloom-select.open .bloom-select-trigger,
+.bloom-select-trigger:focus-visible {
+  border-color: var(--acc);
   box-shadow: 0 0 0 3px var(--acc-weak);
+  outline: none;
 }
-select.sel option { background: #141416; color: var(--ink); padding: 6px; }
-select.sel option:checked { background: var(--elev-hi); }
+
+/* Dropdown menu */
+.bloom-select-menu {
+  position: fixed;
+  min-width: 100%; width: max-content;
+  max-height: 260px; overflow-y: auto; overflow-x: hidden;
+  background: #141416;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 9999;
+  opacity: 0; transform: translateY(-4px) scale(0.98);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.bloom-select-menu.visible {
+  opacity: 1; transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.bloom-select-menu::-webkit-scrollbar { width: 6px; }
+.bloom-select-menu::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
+.bloom-select-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+/* Individual option */
+.bloom-select-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px 7px 10px;
+  font-size: 13px; color: var(--ink); cursor: pointer;
+  border-radius: 7px; white-space: nowrap;
+  transition: background 0.1s ease, color 0.1s ease;
+  position: relative;
+  min-height: 32px;
+}
+.bloom-select-option:hover,
+.bloom-select-option.focused {
+  background: var(--sel-hi);
+}
+.bloom-select-option.active {
+  background: var(--acc-weak); color: var(--acc-ink);
+  font-weight: 600;
+}
+.bloom-select-option.active::before {
+  content: '';
+  flex-shrink: 0;
+  width: 14px; height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat;
+}
+.bloom-select-option:not(.active)::before {
+  content: ''; flex-shrink: 0; width: 14px; height: 14px;
+}
+.bloom-select-option:active {
+  background: var(--acc); color: #fff;
+}
 
 /* ---- toggle switch ---- */
 .tgl { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
@@ -492,7 +588,7 @@ select.sel option:checked { background: var(--elev-hi); }
 .app-item .ac { font-size: 11.5px; color: var(--ink-faint); }
 
 .macro-step { display: flex; align-items: flex-start; gap: 10px; background: var(--elev); border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
-.macro-step select.sel { flex: 0 0 128px; }
+.macro-step select.sel, .macro-step .bloom-select { flex: 0 0 128px; }
 .macro-step .ms-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .macro-step .ms-fields .in { width: 100%; }
 .macro-step .ms-btns { display: flex; flex-direction: column; gap: 3px; }
