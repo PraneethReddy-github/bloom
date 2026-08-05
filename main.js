@@ -123,6 +123,7 @@ function createOnboardWin() {
   onboardWin = new BrowserWindow({
     width: 620, height: 600, center: true, resizable: false, frame: false,
     backgroundColor: '#000000', skipTaskbar: false, title: 'Welcome to Bloom',
+    icon: windowIcon() || undefined,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   onboardWin.setMenuBarVisibility(false);
@@ -170,7 +171,9 @@ function createOverlay() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      // the overlay plays the timer chimes and never sees a click first
+      autoplayPolicy: 'no-user-gesture-required'
     }
   });
   overlay.setAlwaysOnTop(true, 'screen-saver');
@@ -223,18 +226,24 @@ function updateDock() {
   if (process.platform !== 'darwin' || !app.dock) return;
   const anyReal = [settingsWin, onboardWin].some(w => w && !w.isDestroyed() && w.isVisible());
   if (anyReal) {
-    if (lastTrayIcon) { try { app.dock.setIcon(nativeImage.createFromDataURL(lastTrayIcon)); } catch { /* icon optional */ } }
+    const ico = windowIcon();
+    if (ico) { try { app.dock.setIcon(ico); } catch { /* icon optional */ } }
     app.dock.show();
   } else {
     app.dock.hide();
   }
 }
 
-function createSettings(tab) {
+// `cmd` is an optional follow-up the tab acts on once mounted (e.g. 'new-preset').
+function createSettings(tab, cmd) {
+  const handoff = () => {
+    if (tab) settingsWin.webContents.send('settings-tab', tab);
+    if (cmd) settingsWin.webContents.send('settings-cmd', cmd);
+  };
   if (settingsWin && !settingsWin.isDestroyed()) {
     settingsWin.show(); settingsWin.focus();
     updateDock();
-    if (tab) settingsWin.webContents.send('settings-tab', tab);
+    handoff();
     return;
   }
   const saved = cfg.settingsBounds;
@@ -247,14 +256,13 @@ function createSettings(tab) {
     alwaysOnTop: false,         // normal window so the OS dock stays above it
     autoHideMenuBar: true,
     title: 'Bloom Settings',
-    icon: lastTrayIcon ? nativeImage.createFromDataURL(lastTrayIcon) : undefined,
+    icon: windowIcon() || undefined,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   settingsWin.loadFile('renderer/settings.html');
-  if (lastTrayIcon) { try { settingsWin.setIcon(nativeImage.createFromDataURL(lastTrayIcon)); } catch {} }
-  settingsWin.webContents.once('did-finish-load', () => {
-    if (tab) settingsWin.webContents.send('settings-tab', tab);
-  });
+  const winIco = windowIcon();
+  if (winIco) { try { settingsWin.setIcon(winIco); } catch { /* no-op on some platforms */ } }
+  settingsWin.webContents.once('did-finish-load', handoff);
   settingsWin.once('ready-to-show', updateDock);
   settingsWin.on('close', () => {
     if (!settingsWin || settingsWin.isDestroyed()) return;
@@ -289,6 +297,25 @@ function createTray(dataURL) {
 }
 
 let lastTrayIcon = null;
+
+let appIconCache;
+function appIcon() {
+  if (appIconCache !== undefined) return appIconCache;
+  appIconCache = null;
+  try {
+    const img = nativeImage.createFromPath(path.join(__dirname, 'resources', 'icon.png'));
+    if (img && !img.isEmpty()) appIconCache = img;
+  } catch { /* fall back to the tray mark below */ }
+  return appIconCache;
+}
+// Window icons: the real mark if it is there, the tray glyph only as a last resort.
+function windowIcon() {
+  const real = appIcon();
+  if (real) return real;
+  if (!lastTrayIcon) return null;
+  try { const i = nativeImage.createFromDataURL(lastTrayIcon); return i.isEmpty() ? null : i; } catch { return null; }
+}
+
 function blankIcon() {
   return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAFhAJ/wlseKgAAAABJRU5ErkJggg==';
 }
@@ -325,6 +352,14 @@ function summonPalette() {
   uiFlags.uiActive = true;
   applyOverlayState();
   overlay.webContents.send('summon-palette', { rect: budDisplayRectLocal() });
+}
+
+function summonFocusPrompt() {
+  if (!overlay) return false;
+  uiFlags.uiActive = true;
+  applyOverlayState();
+  overlay.webContents.send('focus-custom', { rect: budDisplayRectLocal() });
+  return true;
 }
 
 function endGhost() {
@@ -407,12 +442,6 @@ async function grabSelection() {
   const sel = clipboard.readText();
   clipboard.writeText(prev);                         // restore the user's clipboard
   return r.ok ? sel.trim() : null;
-}
-
-function execFavorite(id, label) {
-  const fav = id && store.findNode(cfg.root, id);
-  if (fav) return execute(fav);
-  voiceToast(`No ${label} set — pick one in Edit Actions`, true);
 }
 
 function toggleDictation() {
@@ -551,10 +580,92 @@ async function getWhisper() {
   return whisperLoading;
 }
 
+// ---- focus timer (pomodoro) ----
+let focusTimer = { phase: 'idle', paused: false, endAt: 0, leftMs: 0, focusMin: 0, breakMin: 0, taskId: null };
+let focusTick = null;
+
+const clampMin = (v, dflt, max) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : dflt;
+};
+
+function focusSnapshot() {
+  const t = focusTimer;
+  const totalMin = t.phase === 'break' ? t.breakMin : t.focusMin;
+  const task = t.taskId ? (cfg.tasks || []).find(x => x.id === t.taskId) : null;
+  return {
+    phase: t.phase, paused: t.paused,
+    remainMs: t.phase === 'idle' ? 0 : (t.paused ? t.leftMs : Math.max(0, t.endAt - Date.now())),
+    totalMs: totalMin * 60000,
+    focusMin: t.focusMin, breakMin: t.breakMin,
+    taskId: t.taskId, taskText: task ? task.text : ''
+  };
+}
+function pushFocus() { broadcast('focus-status', focusSnapshot()); }
+
+// Phase changes ring, they don't talk. The overlay owns playback (it's the one
+// renderer that is always alive and never throttled).
+function focusChime(which) {
+  const s = cfg.focus?.sounds || {};
+  const tone = s[which];
+  if (!tone || tone === 'silent') return;
+  overlay?.webContents.send('play-sound', { tone, volume: s.volume ?? 0.7 });
+}
+
+function focusStart(focusMin, breakMin, taskId) {
+  const f = clampMin(focusMin, 25, 180) || 25;
+  const b = clampMin(breakMin, 5, 90);
+  focusTimer = { phase: 'focus', paused: false, endAt: Date.now() + f * 60000, leftMs: 0, focusMin: f, breakMin: b, taskId: taskId || null };
+  cfg.focus = { ...cfg.focus, lastPreset: { focusMin: f, breakMin: b } };
+  store.save(cfg);
+  clearInterval(focusTick);
+  focusTick = setInterval(focusTickOnce, 1000);
+  pushFocus();
+}
+
+function focusTickOnce() {
+  if (focusTimer.paused || focusTimer.phase === 'idle') return;
+  if (Date.now() >= focusTimer.endAt) focusPhaseEnd();
+  else pushFocus();
+}
+
+function focusPhaseEnd() {
+  const t = focusTimer;
+  if (t.phase === 'focus' && t.breakMin > 0 && cfg.focus?.autoStartBreak !== false) {
+    t.phase = 'break';
+    t.endAt = Date.now() + t.breakMin * 60000;
+    pushFocus();
+    focusChime('focusEnd');
+    return;
+  }
+  const wasBreak = t.phase === 'break';
+  focusStop(true);
+  focusChime(wasBreak ? 'breakEnd' : 'focusEnd');
+}
+
+function focusPause() {
+  const t = focusTimer;
+  if (t.phase === 'idle') return false;
+  if (t.paused) { t.endAt = Date.now() + t.leftMs; t.paused = false; }
+  else { t.leftMs = Math.max(0, t.endAt - Date.now()); t.paused = true; }
+  pushFocus();
+  return true;
+}
+
+function focusStop(silent) {
+  clearInterval(focusTick); focusTick = null;
+  const wasRunning = focusTimer.phase !== 'idle';
+  focusTimer = { phase: 'idle', paused: false, endAt: 0, leftMs: 0, focusMin: 0, breakMin: 0, taskId: null };
+  pushFocus();
+  return wasRunning;
+}
+
 // ---- auto-update (electron-updater; GitHub releases via the build's publish config) ----
 // Modeled on ternix: lazy-require so a build without the optional dep degrades to
 // "up to date", autoDownload off (download is an explicit user action), and every
 // updater event is forwarded to the renderer on one 'update-status' channel.
+// Kept in step with electron-builder.json's publish block.
+const RELEASE_REPO = { owner: 'Praneethreddy-github', repo: 'bloom' };
 let autoUpdater = null;
 function getUpdater() {
   if (autoUpdater) return autoUpdater;
@@ -564,11 +675,11 @@ function getUpdater() {
     autoUpdater.autoInstallOnAppQuit = true;
     const push = (event, info) => broadcast('update-status', { event, info });
     autoUpdater.on('checking-for-update', () => push('checking'));
-    autoUpdater.on('update-available', (info) => { push('available', { version: info?.version, notes: info?.releaseNotes }); voiceToast(`Bloom ${info?.version || ''} available — open Settings › About to update`); });
+    autoUpdater.on('update-available', (info) => { push('available', { version: info?.version, notes: info?.releaseNotes, date: info?.releaseDate }); voiceToast(`Bloom ${info?.version || ''} available — open Settings › About to update`); });
     autoUpdater.on('update-not-available', () => push('none'));
     autoUpdater.on('error', (err) => push('error', { message: String(err?.message || err) }));
     autoUpdater.on('download-progress', (p) => push('progress', { percent: p?.percent, bytesPerSecond: p?.bytesPerSecond }));
-    autoUpdater.on('update-downloaded', (info) => push('downloaded', { version: info?.version }));
+    autoUpdater.on('update-downloaded', (info) => push('downloaded', { version: info?.version, notes: info?.releaseNotes, date: info?.releaseDate }));
   } catch { return null; }        // optional dep absent (e.g. unpackaged run)
   return autoUpdater;
 }
@@ -584,22 +695,39 @@ async function checkForUpdates(silent) {
 }
 
 // ---- shortcuts ----
+let hotkeyFailures = {};       // key ('toggleRing' | 'qf:<nodeId>') -> accelerator
 function registerShortcuts() {
   globalShortcut.unregisterAll();
-  const tryReg = (accel, fn) => {
+  hotkeyFailures = {};
+  const tryReg = (key, accel, fn) => {
     if (!accel) return;
-    try { globalShortcut.register(accel, fn); } catch { /* invalid accelerator */ }
+    let ok = false;
+    try { ok = globalShortcut.register(accel, fn); } catch { ok = false; }  // invalid accelerator
+    if (!ok) hotkeyFailures[key] = accel;
   };
-  tryReg(cfg.hotkeys.toggleRing, () => summonRing());
-  tryReg(cfg.hotkeys.palette, () => summonPalette());
-  if (cfg.hotkeys.dictate) tryReg(cfg.hotkeys.dictate, () => toggleDictation());
-  if (cfg.hotkeys.speak) tryReg(cfg.hotkeys.speak, () => speakSelection());
+  tryReg('toggleRing', cfg.hotkeys.toggleRing, () => summonRing());
+  tryReg('palette', cfg.hotkeys.palette, () => summonPalette());
+  tryReg('dictate', cfg.hotkeys.dictate, () => toggleDictation());
+  tryReg('speak', cfg.hotkeys.speak, () => speakSelection());
   for (const [nodeId, accel] of Object.entries(cfg.quickfire || {})) {
-    tryReg(accel, () => {
+    if (!store.findNode(cfg.root, nodeId)) continue;       // node is gone; nothing to fire
+    tryReg('qf:' + nodeId, accel, () => {
       const node = store.findNode(cfg.root, nodeId);
       if (node) execute(node);
     });
   }
+  broadcast('hotkey-status', hotkeyFailures);
+}
+
+// Bindings that point at nodes which no longer exist would register a global
+// shortcut that silently does nothing, and hold the combination hostage.
+function pruneQuickfire() {
+  const qf = cfg.quickfire || {};
+  let changed = false;
+  for (const id of Object.keys(qf)) {
+    if (qf[id] && !store.findNode(cfg.root, id)) { delete qf[id]; changed = true; }
+  }
+  return changed;
 }
 
 // ---- shell helpers ----
@@ -690,7 +818,7 @@ async function openUrls(params) {
 }
 
 // ---- terminal ----
-const LINUX_TERMS =['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xfce4-terminal', 'alacritty', 'kitty', 'xterm'];
+const LINUX_TERMS = ['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xfce4-terminal', 'alacritty', 'kitty', 'xterm'];
 
 async function openTerminal(params) {
   const cwd = expandHome(params.cwd || '~') || os.homedir();
@@ -860,9 +988,27 @@ async function execute(node) {
         }
         break;
       }
+      case 'focus': {
+        const cmd = p.cmd || 'start';
+        if (cmd === 'start') {
+          focusStart(p.focusMin, p.breakMin, p.taskId);
+          result = { ok: true, note: `Focus ${focusTimer.focusMin} / ${focusTimer.breakMin}` };
+        } else if (cmd === 'pause') {
+          result = focusPause()
+            ? { ok: true, note: focusTimer.paused ? 'Timer paused' : 'Timer resumed' }
+            : { ok: false, error: 'no timer is running' };
+        } else if (cmd === 'stop') {
+          result = focusStop() ? { ok: true, note: 'Timer stopped' } : { ok: false, error: 'no timer is running' };
+        } else if (cmd === 'custom') {
+          if (!summonFocusPrompt()) createSettings('focus', 'new-preset');
+          result = { ok: true };
+        } else result = { ok: false, error: `unknown focus command "${cmd}"` };
+        break;
+      }
       case 'bloom': {
         if (p.cmd === 'settings') { createSettings(); result = { ok: true }; }
         else if (p.cmd === 'palette') { summonPalette(); result = { ok: true }; }
+        else if (p.cmd === 'tasks') { createSettings('focus', 'tasks'); result = { ok: true }; }
         else result = { ok: false, error: `unknown bloom command "${p.cmd}"` };
         break;
       }
@@ -918,7 +1064,7 @@ async function listApps() {
 }
 
 // ---- autostart ----
-const AUTOSTART_FILE =path.join(os.homedir(), '.config', 'autostart', 'bloom.desktop');
+const AUTOSTART_FILE = path.join(os.homedir(), '.config', 'autostart', 'bloom.desktop');
 function setAutostart(enabled) {
   if (IS_WIN) { app.setLoginItemSettings({ openAtLogin: enabled }); return true; }
   try {
@@ -951,8 +1097,12 @@ function wireIPC() {
     } else {
       const hadHotkeys = JSON.stringify([cfg.hotkeys, cfg.quickfire]);
       const hadSize = cfg.bud.size;
+      const hadRoot = cfg.root;
       cfg = store.patch(partial);
-      if (JSON.stringify([cfg.hotkeys, cfg.quickfire]) !== hadHotkeys) registerShortcuts();
+      // A profile switch swaps the whole tree, so re-check every binding against it.
+      const rootSwapped = cfg.root !== hadRoot && partial && partial.root;
+      if (rootSwapped) pruneQuickfire();
+      if (rootSwapped || JSON.stringify([cfg.hotkeys, cfg.quickfire]) !== hadHotkeys) registerShortcuts();
       if (cfg.bud.size !== hadSize && budWin) {
         const c = budCenter();
         placeBud(c.x, c.y); // resize the window around the same center
@@ -965,9 +1115,9 @@ function wireIPC() {
   ipcMain.handle('save-tree', (_e, root) => {
     if (root && root.id === 'root') {
       cfg.root = root;
-      if (cfg.favoriteId && !store.findNode(cfg.root, cfg.favoriteId)) cfg.favoriteId = null;
-      if (cfg.holdFavoriteId && !store.findNode(cfg.root, cfg.holdFavoriteId)) cfg.holdFavoriteId = null;
+      // A deleted action must not leave a pin or a global shortcut pointing at it.
       cfg.pinnedIds = (cfg.pinnedIds || []).filter(id => store.findNode(cfg.root, id));
+      if (pruneQuickfire()) registerShortcuts();
       store.save(cfg);
       broadcast('config-changed', cfg);
     }
@@ -990,7 +1140,7 @@ function wireIPC() {
   ipcMain.on('onboarding-done', () => finishOnboarding());
 
   // Custom window controls for the frameless settings window.
-  ipcMain.on('win-min', e =>BrowserWindow.fromWebContents(e.sender)?.minimize());
+  ipcMain.on('win-min', e => BrowserWindow.fromWebContents(e.sender)?.minimize());
   ipcMain.on('win-max', e => {
     const w = BrowserWindow.fromWebContents(e.sender);
     if (!w) return;
@@ -1068,8 +1218,6 @@ function wireIPC() {
     switch (m.cmd) {
       case 'open-ring': summonRing(); break;
       case 'pop': overlay?.webContents.send('pop-ring'); break;
-      case 'favorite': execFavorite(cfg.favoriteId, 'double-tap favourite'); break;
-      case 'hold-favorite': execFavorite(cfg.holdFavoriteId, 'hold favourite'); break;
       case 'dictate-toggle': toggleDictation(); break;
       case 'dictate-stop': stopDictation(); break;
       case 'speak': speakSelection(); break;
@@ -1087,6 +1235,12 @@ function wireIPC() {
         break;
       }
       case 'chip-run': overlay?.webContents.send('chip-run'); break;
+      case 'focus-hover': {
+        if (focusTimer.phase === 'idle') break;
+        if (m.on && !uiFlags.ringOpen && !uiFlags.uiActive) { uiFlags.displayOnly = true; applyOverlayState(); }
+        overlay?.webContents.send('focus-tip', { on: !!m.on, ...focusSnapshot() });
+        break;
+      }
       case 'key': overlay?.webContents.send('bud-key', { key: m.key, shift: !!m.shift }); break;
       case 'drag': placeBud(m.cx, m.cy); break;
       case 'drag-end': {
@@ -1139,6 +1293,72 @@ function wireIPC() {
   });
 
   // Updates: check / download / install, plus current version for the About page.
+  ipcMain.handle('focus-get', () => focusSnapshot());
+  ipcMain.handle('pick-sound', async () => {
+    const r = await dialog.showOpenDialog(settingsWin || undefined, {
+      title: 'Choose a sound',
+      properties: ['openFile'],
+      filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'opus'] }]
+    });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  ipcMain.on('preview-sound', (_e, o) => overlay?.webContents.send('play-sound', o));
+  ipcMain.handle('focus-start', (_e, o) => { focusStart(o?.focusMin, o?.breakMin, o?.taskId); return focusSnapshot(); });
+  ipcMain.handle('focus-pause', () => { focusPause(); return focusSnapshot(); });
+  ipcMain.handle('focus-stop', () => { focusStop(); return focusSnapshot(); });
+
+  ipcMain.handle('get-templates', () => store.templateList());
+  ipcMain.handle('apply-template', (_e, o) => {
+    const key = o && o.key;
+    const chosen = store.templateList().find(t => t.key === key);
+    const tpl = store.buildTemplate(key);
+    if (!tpl || !chosen) return cfg;
+    // Every template is written into Profiles, so the two not chosen stay one click away.
+    // A name that already exists is someone's edited copy — never clobber it with the pristine one.
+    const saved = { ...(cfg.profiles?.saved || {}) };
+    // Park the live setup under its own name first, or applying a template from a
+    // re-run of onboarding would drop whatever they had built.
+    if (cfg.profiles?.active) saved[cfg.profiles.active] = { root: cfg.root, pinnedIds: cfg.pinnedIds || [] };
+    for (const t of store.templateList()) {
+      if (saved[t.label]) continue;
+      const b = store.buildTemplate(t.key);
+      saved[t.label] = { root: b.root, pinnedIds: b.pinnedIds };
+    }
+    const live = saved[chosen.label] || tpl;      // prefer their edited copy over a fresh template
+    // appearance is deliberately absent: the accent is one global setting, so a
+    // profile switch never repaints the app out from under you.
+    Object.assign(cfg, {
+      profiles: { active: chosen.label, saved },
+      root: live.root, pinnedIds: live.pinnedIds || []
+    });
+    store.save(cfg);
+    broadcast('config-changed', cfg);
+    return cfg;
+  });
+
+  // Notes for a version that is already installed. electron-updater only reports on
+  // versions newer than yours, so being up to date otherwise means seeing nothing at all.
+  ipcMain.handle('release-notes', async (_e, version) => {
+    const { owner, repo } = RELEASE_REPO;
+    const v = String(version || app.getVersion()).replace(/^v/, '');
+    const urls = [
+      `https://api.github.com/repos/${owner}/${repo}/releases/tags/v${v}`,
+      `https://api.github.com/repos/${owner}/${repo}/releases/tags/${v}`
+    ];
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'Bloom' },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!res.ok) continue;
+        const j = await res.json();
+        return { version: (j.tag_name || v).replace(/^v/, ''), notes: j.body || '', date: j.published_at || null };
+      } catch { /* offline or rate-limited — fall through */ }
+    }
+    return null;
+  });
+
   ipcMain.handle('update-check', () => checkForUpdates(false));
   ipcMain.handle('update-download', async () => {
     const up = getUpdater(); if (!up) return;
@@ -1156,7 +1376,8 @@ function wireIPC() {
   ipcMain.on('tray-icon', (_e, dataURL) => {
     lastTrayIcon = dataURL;
     try { createTray(dataURL); } catch { /* tray unavailable in some sandboxes */ }
-    // Reuse the same mark as the settings/onboarding window icon.
+    // Only needed when the packaged mark is missing — otherwise the windows already have it.
+    if (appIcon()) return;
     try {
       const img = nativeImage.createFromDataURL(dataURL);
       for (const w of [settingsWin, onboardWin]) if (w && !w.isDestroyed()) w.setIcon(img);

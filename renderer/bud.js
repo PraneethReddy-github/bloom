@@ -27,6 +27,68 @@
     document.body.classList.toggle('flat', !!a.flat);
   }
 
+  // ---- pomodoro ring ----
+  // The ring lives in the window's padding: radius = bud radius + 6.5, stroke 3.5,
+  // so its outer edge lands ~8px out and always clears the 18px pad.
+  const ringEl = document.getElementById('focus-ring');
+  const trackEl = document.getElementById('fr-track');
+  const progEl = document.getElementById('fr-prog');
+  // Fixed, never accent-derived — the same three colours mean the same three things
+  // in every profile, whatever accent is set.
+  const FOCUS_COLORS = { focus: '#34D399', break: '#E5484D', paused: '#6B7180' };
+  let focus = { phase: 'idle' };
+  let ringCirc = 0;
+
+  function layoutRing() {
+    const r = cfg.bud.size / 2 + 6.5;
+    ringCirc = 2 * Math.PI * r;
+    for (const c of [trackEl, progEl]) {
+      c.setAttribute('cx', '50%'); c.setAttribute('cy', '50%');
+      c.setAttribute('r', r.toFixed(2));
+      c.setAttribute('stroke-width', '3.5');
+    }
+    progEl.setAttribute('stroke-dasharray', ringCirc.toFixed(2));
+  }
+
+  function paintRing(s, phaseChanged) {
+    const running = s.phase !== 'idle';
+    ringEl.classList.toggle('on', running && cfg.focus?.showRing !== false);
+    ringEl.classList.toggle('paused', !!s.paused);
+    if (!running) { progEl.setAttribute('stroke-dashoffset', ringCirc.toFixed(2)); return; }
+    // The arc depletes as the phase runs down, so what's left is the time that's left.
+    const left = s.totalMs ? Math.max(0, Math.min(1, s.remainMs / s.totalMs)) : 0;
+    ringEl.style.setProperty('--fr-color', FOCUS_COLORS[s.paused ? 'paused' : s.phase] || FOCUS_COLORS.focus);
+    if (phaseChanged) {                     // don't sweep backwards when the arc refills
+      ringEl.classList.add('jump');
+      progEl.setAttribute('stroke-dashoffset', (ringCirc * (1 - left)).toFixed(2));
+      void progEl.getBoundingClientRect();
+      ringEl.classList.remove('jump');
+    } else progEl.setAttribute('stroke-dashoffset', (ringCirc * (1 - left)).toFixed(2));
+  }
+
+  function onFocus(s) {
+    const changed = s.phase !== focus.phase;
+    const ended = changed && s.phase === 'idle' && focus.phase !== 'idle';
+    focus = s;
+    paintRing(s, changed);
+    if (ended) {
+      ringEl.classList.remove('done'); void ringEl.offsetWidth; ringEl.classList.add('done');
+      setTimeout(() => ringEl.classList.remove('done'), 950);
+    }
+  }
+
+  // Hovering anywhere in the bud window asks the overlay for the time-left pill —
+  // this window is far too small to hold a readable tooltip of its own.
+  let tipOn = false;
+  const setTip = on => {
+    if (on === tipOn) return;
+    if (on && (focus.phase === 'idle' || ringOpen)) return;
+    tipOn = on;
+    cmd('focus-hover', { on });
+  };
+  document.body.addEventListener('mouseenter', () => setTip(true));
+  document.body.addEventListener('mouseleave', () => setTip(false));
+
   // tray icon: the Bloom mark, white lines on a dark disc
   function makeTrayIcon() {
     const c = document.createElement('canvas');
@@ -52,12 +114,6 @@
   let lastWheel = 0;
   let voiceState = 'idle';   // idle | listening | transcribing | speaking
 
-  // hold gesture → read-aloud or the hold favourite
-  function doHold() {
-    if (cfg.behavior.holdAction === 'speak') cmd('speak');
-    else cmd('hold-favorite');
-  }
-
   budEl.addEventListener('pointerdown', e => {
     if (e.button === 1) { e.preventDefault(); cmd('hide'); return; }
     if (e.button !== 0) return;
@@ -70,7 +126,7 @@
     clearTimeout(clickTimer);
     if (!ringOpen) {
       longTimer = setTimeout(() => {
-        if (drag && !drag.moved) { suppressClick = true; doHold(); }
+        if (drag && !drag.moved) { suppressClick = true; cmd('speak'); }   // hold = read aloud
       }, 430);
     }
   });
@@ -78,8 +134,8 @@
   window.addEventListener('pointermove', e => {
     if (!drag) return;
     if (!drag.moved && Math.hypot(e.screenX - drag.sx, e.screenY - drag.sy) > 5) {
-      // Real drag: cancel long-press favorite and click even when pinned/ring-open,
-      // so a pinned bud never fires favorite on a drag attempt.
+      // Real drag: cancel the long-press and the click even when pinned/ring-open,
+      // so a pinned bud never starts read-aloud on a drag attempt.
       drag.moved = true;
       clearTimeout(longTimer);
       if (cfg.bud.pinned || ringOpen) {
@@ -108,13 +164,9 @@
     if (voiceState === 'listening') { cmd('dictate-stop'); return; }
     if (voiceState === 'speaking') { cmd('speak-stop'); return; }
     if (Date.now() - lastWheel < 1600) { cmd('chip-run'); return; }
-    // Delay the ring open only when a double-tap actually has an action to catch.
-    const dbl = cfg.behavior.doubleClickAction;
-    const hasDouble = dbl === 'dictate' || (dbl !== 'dictate' && cfg.favoriteId);
-    if (hasDouble) {
-      clearTimeout(clickTimer);
-      clickTimer = setTimeout(() => openWithPulse(), 200);
-    } else openWithPulse();
+    // Hold the ring open briefly so a second tap can land as a double-tap instead.
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => openWithPulse(), 200);
   });
 
   function openWithPulse() {
@@ -127,8 +179,7 @@
     e.preventDefault();
     if (ringOpen) return;
     clearTimeout(clickTimer);
-    if (cfg.behavior.doubleClickAction === 'dictate') cmd('dictate-toggle');
-    else if (cfg.favoriteId) cmd('favorite');
+    cmd('dictate-toggle');
   });
 
   budEl.addEventListener('contextmenu', e => { e.preventDefault(); cmd('ctx'); });
@@ -166,12 +217,14 @@
   });
 
   // events
-  window.bloom.on('config-changed', c => { cfg = c; applyAppearance(); });
+  window.bloom.on('config-changed', c => { cfg = c; applyAppearance(); layoutRing(); paintRing(focus, true); });
+  window.bloom.on('focus-status', onFocus);
   // main blanks the bud after the overlay paints; renderer timers throttle while occluded
   window.bloom.on('bud-conceal', on => document.body.classList.toggle('conceal', !!on));
   window.bloom.on('ui-flags', f => {
     ringOpen = !!f.ringOpen;
     document.body.classList.toggle('open', ringOpen);
+    if (ringOpen) setTip(false);      // the dial owns the bud's surroundings while it's open
   });
   // Voice state drives the orb morph: listening pulse, transcribing spinner, speaking glow.
   window.bloom.on('voice-ui', v => {
@@ -185,8 +238,10 @@
 
   // boot
   applyAppearance();
+  layoutRing();
   budEl.classList.add('breathe');
   makeTrayIcon();
+  window.bloom.focusGet().then(onFocus).catch(() => {});
 
   // test hook
   window.__bud = {

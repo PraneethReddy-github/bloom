@@ -16,10 +16,15 @@
     /* Ring open: overlay owns the bud pixels, so blank the real bud via class.
        Opacity must change instantly — transitions stall while occluded behind the overlay. */
     #bud { transition: transform 0.28s cubic-bezier(0.3, 1.3, 0.5, 1); }
-    body.conceal #bud { opacity: 0; }
+    body.conceal #bud, body.conceal #focus-ring { opacity: 0; }
   </style>
 </head>
 <body>
+  <!-- Pomodoro ring: sits in the window's 18px pad, outside the bud, never over it. -->
+  <svg id="focus-ring" width="100%" height="100%" fill="none" aria-hidden="true">
+    <circle id="fr-track"></circle>
+    <circle id="fr-prog"></circle>
+  </svg>
   <div id="bud">
     <div class="bud-body">
       <div class="bud-aurora"></div>

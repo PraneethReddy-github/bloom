@@ -3,9 +3,9 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const on = (channel, cb) => {
-  const ok = ['config-changed', 'summon-ring', 'summon-palette', 'exec-feedback', 'settings-tab',
+  const ok = ['config-changed', 'summon-ring', 'summon-palette', 'exec-feedback', 'settings-tab', 'settings-cmd',
     'ui-flags', 'bud-pos', 'bud-conceal', 'pop-ring', 'close-ring', 'show-ctx', 'chip-wheel', 'chip-run', 'bud-key',
-    'voice-ui', 'voice-cmd', 'update-status'];
+    'voice-ui', 'voice-cmd', 'update-status', 'focus-status', 'focus-tip', 'focus-custom', 'play-sound', 'hotkey-status'];
   if (!ok.includes(channel)) return;
   ipcRenderer.on(channel, (_e, data) => cb(data));
 };
@@ -36,8 +36,21 @@ contextBridge.exposeInMainWorld('bloom', {
   listVoices: () => ipcRenderer.invoke('list-voices'),   // [{id, label}]
   previewVoice: (voice) => ipcRenderer.send('preview-voice', voice),
 
+  // focus timer (pomodoro) — state lives in main, these all resolve to a snapshot
+  focusGet: () => ipcRenderer.invoke('focus-get'),
+  focusStart: (opts) => ipcRenderer.invoke('focus-start', opts),   // {focusMin, breakMin, taskId?}
+  focusPause: () => ipcRenderer.invoke('focus-pause'),
+  focusStop: () => ipcRenderer.invoke('focus-stop'),
+  pickSound: () => ipcRenderer.invoke('pick-sound'),                  // absolute path | null
+  previewSound: (o) => ipcRenderer.send('preview-sound', o),          // {tone, volume}
+
+  // profile templates
+  getTemplates: () => ipcRenderer.invoke('get-templates'),
+  applyTemplate: (opts) => ipcRenderer.invoke('apply-template', opts),   // {key, pace}
+
   // updates
   updateCheck: () => ipcRenderer.invoke('update-check'),
+  releaseNotes: (version) => ipcRenderer.invoke('release-notes', version),   // {version, notes, date} | null
   updateDownload: () => ipcRenderer.invoke('update-download'),
   updateInstall: () => ipcRenderer.send('update-install'),
   setAutostart: (enabled) => ipcRenderer.invoke('set-autostart', enabled),

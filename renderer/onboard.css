@@ -61,6 +61,28 @@ h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; color: #fff; ma
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* question cards */
+.ob-choices { display: flex; flex-direction: column; gap: 9px; width: 100%; max-width: 400px; margin-top: 22px; }
+.ob-choice {
+  display: flex; align-items: center; gap: 13px; text-align: left;
+  padding: 13px 15px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line);
+  color: var(--ink); font: inherit; cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+}
+.ob-choice:hover { background: rgba(255, 255, 255, 0.07); border-color: var(--c); transform: translateY(-1px); }
+.ob-choice.sel { border-color: var(--c); background: rgba(255, 255, 255, 0.08); }
+.obc-ic { flex: 0 0 auto; color: var(--c); display: flex; }
+.obc-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.obc-label { font-size: 14px; font-weight: 600; }
+.obc-sub { font-size: 12.5px; color: var(--ink-dim); line-height: 1.4; }
+
+.ob-btn:disabled { opacity: 0.35; cursor: default; }
+.ob-btn.primary:disabled:hover { filter: none; }
+.ob-art[hidden] { display: none; }
+
 .ob-foot { width: 100%; margin-top: 34px; display: flex; align-items: center; justify-content: space-between; }
 .ob-dots { display: flex; gap: 8px; }
 .ob-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); transition: all 0.25s ease; }

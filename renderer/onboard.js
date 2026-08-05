@@ -1,4 +1,6 @@
 // Bloom onboarding window: a small first-run tour, cards swipe horizontally.
+// One card asks what kind of day the user has and applies the matching starter
+// profile, so nobody lands on a generic tree they have to dismantle.
 'use strict';
 (async function () {
   const IC = window.BloomIcons;
@@ -6,11 +8,15 @@
 
   let cfg = {};
   try { cfg = await window.bloom.getConfig(); } catch (_) {}
-  // accent themes the interactive bits
+  let templates = [];
+  try { templates = await window.bloom.getTemplates(); } catch (_) {}
+
   const ACC = (cfg.appearance && cfg.appearance.accentA) || '#007ACC';
   document.documentElement.style.setProperty('--acc', ACC);
   const hkKeys = ((cfg.hotkeys && cfg.hotkeys.toggleRing) || 'Control+Alt+Space')
     .replace(/Control/g, 'Ctrl').replace(/Super/g, 'Meta').split('+');
+
+  const answers = { template: null };
 
   // Card 1: the Bloom mark.
   const brandArt = IC.logo(120, { strokeWidth: 2.4 });
@@ -62,25 +68,61 @@
       p: `Press these keys to call the ring up over any app. <b>Drag the bud</b> wherever it feels right, or pin it in place.`
     },
     {
+      h: 'Which of these is most like your day?',
+      p: `Pick the closest one and Bloom starts out already useful. Nothing here is permanent — you can edit every part of it, or swap templates later in Settings.`,
+      choices: templates.map(t => ({ key: t.key, label: t.label, sub: t.for, icon: t.icon })),
+      answer: 'template'
+    },
+    {
       art: brandArt,
-      h: 'Make it yours',
-      p: `<b>Right-click the bud</b> to open Settings. Add your own actions, pick a favorite, bind hotkeys, and shape how it looks. When you're done, the bud is waiting in the center of your screen.`
+      h: 'You’re set',
+      p: `<b>Right-click the bud</b> any time to open Settings — that's where you add your own actions, bind hotkeys, run the focus timer and sort your tasks. A short tour will point it all out the first time you open it.`,
+      summary: true
     }
   ];
 
   let i = 0;
   const slide = $('#slide'), artEl = $('#art'), hEl = $('#ob-h'), pEl = $('#ob-p');
+  const choicesEl = $('#ob-choices');
   const dotsEl = $('#dots'), nextBtn = $('#ob-next'), skipBtn = $('#ob-skip');
   dotsEl.innerHTML = steps.map(() => '<i></i>').join('');
   const dots = Array.from(dotsEl.children);
 
   function render(dir) {
     const s = steps[i];
-    artEl.innerHTML = s.art;
+    // The summary card names the choice they made, so the handoff isn't a surprise.
+    // A template never changes the accent — it's one global setting — so nothing repaints here.
+    const tpl = templates.find(t => t.key === answers.template);
+    artEl.innerHTML = s.summary && tpl ? IC.logo(120, { strokeWidth: 2.4, stroke: ACC }) : (s.art || '');
+    artEl.hidden = !s.art && !s.summary;
     hEl.textContent = s.h;
-    pEl.innerHTML = s.p;
+    pEl.innerHTML = s.summary && tpl
+      ? `Starting you on the <b>${IC.escapeHTML(tpl.label)}</b> setup. ${s.p}`
+      : s.p;
+
+    if (s.choices && s.choices.length) {
+      choicesEl.hidden = false;
+      choicesEl.innerHTML = s.choices.map(c => `
+        <button class="ob-choice ${answers[s.answer] === c.key ? 'sel' : ''}" data-k="${IC.escapeHTML(c.key)}"
+                style="--c:${IC.escapeHTML(ACC)}">
+          <span class="obc-ic">${IC.markup(c.icon, 18)}</span>
+          <span class="obc-text"><span class="obc-label">${IC.escapeHTML(c.label)}</span>
+            <span class="obc-sub">${IC.escapeHTML(c.sub || '')}</span></span>
+        </button>`).join('');
+      choicesEl.querySelectorAll('.ob-choice').forEach(b => b.addEventListener('click', () => {
+        answers[s.answer] = b.dataset.k;
+        choicesEl.querySelectorAll('.ob-choice').forEach(x => x.classList.toggle('sel', x === b));
+        nextBtn.disabled = false;
+        setTimeout(() => { if (answers[s.answer] === b.dataset.k) go(1); }, 260);
+      }));
+    } else {
+      choicesEl.hidden = true;
+      choicesEl.innerHTML = '';
+    }
+
     dots.forEach((d, n) => d.classList.toggle('on', n === i));
     nextBtn.textContent = i === steps.length - 1 ? 'Start' : 'Next';
+    nextBtn.disabled = !!(s.choices && s.choices.length && !answers[s.answer]);
     skipBtn.style.visibility = i === steps.length - 1 ? 'hidden' : 'visible';
     slide.classList.remove('in-right', 'in-left');
     void slide.offsetWidth;
@@ -93,12 +135,22 @@
     if (ni >= steps.length) { finish(); return; }
     i = ni; render(delta < 0 ? 'back' : 'fwd');
   }
-  function finish() { try { window.bloom.onboardingDone(); } catch (_) {} }
 
-  nextBtn.addEventListener('click', () => go(1));
+  let finishing = false;
+  async function finish() {
+    if (finishing) return;
+    finishing = true;
+    // Skipping the questions leaves the stock setup — never guess a template for them.
+    if (answers.template) {
+      try { await window.bloom.applyTemplate({ key: answers.template }); } catch (_) {}
+    }
+    try { window.bloom.onboardingDone(); } catch (_) {}
+  }
+
+  nextBtn.addEventListener('click', () => { if (!nextBtn.disabled) go(1); });
   skipBtn.addEventListener('click', finish);
   window.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); if (!nextBtn.disabled) go(1); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
     else if (e.key === 'Escape') finish();
   });

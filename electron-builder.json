@@ -9,6 +9,7 @@
     "main.js",
     "preload.js",
     "config.js",
+    "resources/icon.png",
     "renderer/**/*",
     "!test${/*}",
     "!**/*.map",
@@ -21,7 +22,9 @@
   ],
   "npmRebuild": false,
   "win": {
-    "target": ["nsis"],
+    "target": [
+      "nsis"
+    ],
     "icon": "resources/icon.png"
   },
   "nsis": {
@@ -30,16 +33,24 @@
     "allowToChangeInstallationDirectory": true
   },
   "mac": {
-    "target": ["dmg", "zip"],
+    "target": [
+      "dmg",
+      "zip"
+    ],
     "icon": "resources/icon.png",
     "category": "public.app-category.productivity"
   },
   "linux": {
-    "target": ["AppImage", "deb"],
+    "target": [
+      "AppImage",
+      "deb"
+    ],
     "icon": "resources/icons",
     "category": "Utility",
     "maintainer": "Bloom",
-    "executableArgs": ["--no-sandbox"]
+    "executableArgs": [
+      "--no-sandbox"
+    ]
   },
   "deb": {
     "depends": [

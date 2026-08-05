@@ -562,7 +562,101 @@ if (fine && !reduce) {
   });
 })();
 
-/* ─────────────  8. settings tabs  ───────────── */
+/* ─────────────  8. focus ring demo  ─────────────
+   A real 20/10 block, sped up ~100× so a visitor sees a whole cycle. The colours are
+   the app's own rule: focus on the accent, break fixed green, paused fixed grey. */
+(function ringDemo() {
+  const wrap = $('#ringDemo'), prog = $('#ringProg');
+  if (!wrap || !prog) return;
+
+  const R = 76, C = 2 * Math.PI * R;
+  const time = $('.rp-time', wrap);
+  prog.setAttribute('stroke-dasharray', C.toFixed(2));
+
+  const FOCUS_MIN = 20, BREAK_MIN = 10;
+  const SPEED = 100;                       // 20 real minutes ≈ 12 s on the page
+  const PAUSE_AT = 0.55;                   // hold once mid-focus so the grey state is seen
+
+  let t0 = performance.now(), phaseName = 'focus', pausedUntil = 0, pausedShown = false;
+
+  const mmss = ms => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  function frame(now) {
+    const total = (phaseName === 'break' ? BREAK_MIN : FOCUS_MIN) * 60000;
+    if (pausedUntil) {
+      if (now < pausedUntil) { requestAnimationFrame(frame); return; }
+      t0 += now - pausedUntil;             // resume where it stopped
+      pausedUntil = 0;
+      wrap.classList.remove('is-paused');
+    }
+    const elapsed = (now - t0) * SPEED;
+    let remain = total - elapsed;
+
+    if (remain <= 0) {
+      if (phaseName === 'focus') { phaseName = 'break'; wrap.classList.add('is-break'); }
+      else { phaseName = 'focus'; wrap.classList.remove('is-break'); pausedShown = false; }
+      t0 = now;
+      requestAnimationFrame(frame);
+      return;
+    }
+    if (phaseName === 'focus' && !pausedShown && remain / total < PAUSE_AT) {
+      pausedShown = true;
+      pausedUntil = now + 1600;
+      wrap.classList.add('is-paused');
+    }
+
+    const left = remain / total;
+    prog.setAttribute('stroke-dashoffset', (C * (1 - left)).toFixed(2));
+    time.textContent = mmss(remain);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Show the pill once unprompted so the hover affordance is discoverable.
+  new IntersectionObserver((es, io) => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    setTimeout(() => wrap.classList.add('is-peek'), 700);
+    setTimeout(() => wrap.classList.remove('is-peek'), 3400);
+  }), { threshold: .5 }).observe(wrap);
+})();
+
+/* ─────────────  9. matrix demo — the cards really do drag  ───────────── */
+(function matrixDemo() {
+  const grid = $('#quadGrid');
+  if (!grid) return;
+  let held = null;
+
+  $$('.tcard', grid).forEach(card => {
+    card.addEventListener('dragstart', e => {
+      held = card;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');   // Firefox needs a payload
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('is-dragging');
+      $$('.quad', grid).forEach(q => q.classList.remove('is-over'));
+      held = null;
+    });
+  });
+
+  $$('.quad', grid).forEach(quad => {
+    quad.addEventListener('dragover', e => { e.preventDefault(); quad.classList.add('is-over'); });
+    quad.addEventListener('dragleave', e => { if (!quad.contains(e.relatedTarget)) quad.classList.remove('is-over'); });
+    quad.addEventListener('drop', e => {
+      e.preventDefault();
+      quad.classList.remove('is-over');
+      if (held) $('.quad-body', quad).appendChild(held);
+      petals.burst(e.clientX, e.clientY, 8);
+    });
+  });
+})();
+
+/* ─────────────  10. settings tabs  ───────────── */
 
 $$('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -574,7 +668,7 @@ $$('.tab-btn').forEach(btn => {
   });
 });
 
-/* ─────────────  9. nav  ───────────── */
+/* ─────────────  11. nav  ───────────── */
 
 const nav = $('#nav');
 const onScroll = () => nav.classList.toggle('scrolled', scrollY > 8);
@@ -591,7 +685,7 @@ $$('a', menu).forEach(a => a.addEventListener('click', () => {
   burger.setAttribute('aria-expanded', 'false');
 }));
 
-/* ─────────────  10. petal toggle + year  ───────────── */
+/* ─────────────  12. petal toggle + year  ───────────── */
 
 const toggle = $('#motionToggle');
 if (!petals.enabled) { toggle.textContent = 'Petals: off'; toggle.setAttribute('aria-pressed', 'true'); }
@@ -603,7 +697,7 @@ toggle.addEventListener('click', () => {
 
 $('#year').textContent = new Date().getFullYear();
 
-/* ─────────────  11. latest release  ───────────── */
+/* ─────────────  13. latest release  ───────────── */
 
 (async () => {
   const repo = 'Praneethreddy-github/bloom';

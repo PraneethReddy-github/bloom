@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloom — One bloom away.</title>
   <meta name="description"
-    content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — plus offline Whisper dictation and native read-aloud. Windows &amp; Linux. MIT." />
+    content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — plus offline Whisper dictation, native read-aloud, a pomodoro ring around the bud and an Eisenhower task board. Windows &amp; Linux. MIT." />
   <meta property="og:title" content="Bloom — One bloom away." />
   <meta property="og:description"
-    content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Local voice AI included." />
+    content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Local voice AI, a focus timer and a task matrix included." />
   <meta name="theme-color" content="#08080a" />
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='228' fill='%2308080a'/%3E%3Cg fill='none' stroke='%23f1ede6' stroke-width='30'%3E%3Ccircle cx='512' cy='386.1' r='140.3'/%3E%3Ccircle cx='633.7' cy='474.55' r='140.3'/%3E%3Ccircle cx='587.34' cy='617.9' r='140.3'/%3E%3Ccircle cx='436.67' cy='617.9' r='140.3'/%3E%3Ccircle cx='390.31' cy='474.55' r='140.3'/%3E%3C/g%3E%3C/svg%3E" />
@@ -40,6 +40,7 @@
         <a href="#dial">The dial</a>
         <a href="#voice">Voice</a>
         <a href="#actions">Actions</a>
+        <a href="#focus">Focus</a>
         <a href="#keys">Hotkeys</a>
         <a href="#download">Download</a>
       </nav>
@@ -64,6 +65,7 @@
     <a href="#dial">The dial</a>
     <a href="#voice">Voice</a>
     <a href="#actions">Actions</a>
+    <a href="#focus">Focus &amp; tasks</a>
     <a href="#keys">Hotkeys</a>
     <a href="#settings">Settings</a>
     <a href="#download">Download</a>
@@ -99,7 +101,7 @@
           </div>
 
           <ul class="hero-facts">
-            <li><strong>10</strong><span>action types</span></li>
+            <li><strong>11</strong><span>action types</span></li>
             <li><strong>17</strong><span>system toggles built in</span></li>
             <li><strong>1</strong><span>bud, infinite possibilities</span></li>
           </ul>
@@ -124,11 +126,13 @@
         <span>Launch App</span><i>✿</i><span>Open URL</span><i>✿</i><span>Terminal Profile</span><i>✿</i>
         <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
         <span>Open File</span><i>✿</i><span>Custom
-          Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i>
+          Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i><span>Focus
+          Timer</span><i>✿</i>
         <span>Launch App</span><i>✿</i><span>Open URL</span><i>✿</i><span>Terminal Profile</span><i>✿</i>
         <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
         <span>Open File</span><i>✿</i><span>Custom
-          Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i>
+          Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i><span>Focus
+          Timer</span><i>✿</i>
       </div>
     </div>
 
@@ -148,11 +152,11 @@
         </article>
         <article class="g-card" data-tilt><span class="g-tag">Double-click</span>
           <h3>Dictate</h3>
-          <p>Starts voice dictation by default — or fires your starred favourite instead, your call.</p>
+          <p>Starts voice dictation on the spot. Tap once more to stop it.</p>
         </article>
         <article class="g-card" data-tilt><span class="g-tag">Long-press</span>
           <h3>Read aloud</h3>
-          <p>Reads your current text selection by default — or a second, separate favourite.</p>
+          <p>Reads your current text selection aloud, in your system's own voice.</p>
         </article>
         <article class="g-card" data-tilt><span class="g-tag">Drag</span>
           <h3>Move it anywhere</h3>
@@ -286,8 +290,8 @@
         </article>
       </div>
 
-      <p class="foot-note reveal"><kbd>Ctrl+Alt+D</kbd> and <kbd>Ctrl+Alt+R</kbd> are always live — completely
-        independent of whatever you've pointed the bud's double-click and long-press at.</p>
+      <p class="foot-note reveal"><kbd>Ctrl+Alt+D</kbd> and <kbd>Ctrl+Alt+R</kbd> are always live — the same two
+        things the bud's double-click and long-press do, without reaching for the bud.</p>
     </section>
 
     <!-- ─────────────────────────────  ACTIONS  ───────────────────────────── -->
@@ -295,7 +299,7 @@
       <div class="head reveal">
         <p class="kicker">04 — Action catalog</p>
         <h2>If it can be triggered, <em>Bloom can bloom it.</em></h2>
-        <p class="lede">Every node in the tree is either a folder or one of these ten. Each one reports
+        <p class="lede">Every node in the tree is either a folder or one of these eleven. Each one reports
           back with a toast.</p>
       </div>
 
@@ -342,6 +346,10 @@
           <h3>Macro</h3>
           <p>Chain any of the above in sequence, with timed waits between steps. "Start My Day" ships as an example.</p>
         </article>
+        <article class="act" data-tilt><span class="act-n">11</span>
+          <h3>Focus Timer</h3>
+          <p>Start, pause or stop a pomodoro. Your own minutes on and off — the presets in the dial are just these.</p>
+        </article>
       </div>
 
       <div class="toggles reveal">
@@ -361,10 +369,133 @@
       </div>
     </section>
 
-    <!-- ─────────────────────────────  HOTKEYS  ───────────────────────────── -->
-    <section class="section" id="keys">
+    <!-- ─────────────────────────────  FOCUS & TASKS  ───────────────────────────── -->
+    <section class="section" id="focus">
       <div class="head reveal">
-        <p class="kicker">05 — Global hotkeys</p>
+        <p class="kicker">05 — Focus &amp; tasks</p>
+        <h2>A timer you read <em>without looking away.</em></h2>
+        <p class="lede">Pick a block from the dial and it draws itself around the bud. No extra window,
+          no browser tab, nothing new in your taskbar — just the thing already on your screen,
+          quietly counting down.</p>
+      </div>
+
+      <div class="focus-grid reveal">
+        <div class="ring-demo" id="ringDemo">
+          <div class="ring-stage">
+            <svg class="ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+              <circle class="ring-track" cx="100" cy="100" r="76" />
+              <circle class="ring-prog" id="ringProg" cx="100" cy="100" r="76" />
+            </svg>
+            <div class="ring-bud" aria-hidden="true"></div>
+            <div class="ring-pill" id="ringPill">
+              <i class="rp-dot"></i><span class="rp-time">20:00</span>
+            </div>
+          </div>
+          <p class="ring-cap"><span class="live-dot"></span> Sped up — hover the ring to see the pill the bud shows</p>
+        </div>
+
+        <div class="focus-copy">
+          <ol class="steps">
+            <li>
+              <span class="num">01</span>
+              <div>
+                <h3>Pick a block</h3>
+                <p>The Focus folder ships with <code>20 / 10</code>, <code>40 / 20</code> and <code>50 / 10</code>,
+                  plus a <strong>Custom…</strong> node for your own minutes on and off.</p>
+              </div>
+            </li>
+            <li>
+              <span class="num">02</span>
+              <div>
+                <h3>Read it at a glance</h3>
+<p>Focus is <strong class="is-focus">green</strong>, breaks turn <strong class="is-break">red</strong>,
+                  paused goes <strong class="is-pause">grey</strong> — fixed colours, identical in every profile,
+                  so the ring means the same thing whatever accent you've picked.</p>
+              </div>
+            </li>
+            <li>
+              <span class="num">03</span>
+              <div>
+                <h3>Hover for the detail</h3>
+<p>A dot for the phase and the time left. Nothing else, and only while you're looking at
+                  it — when a block ends you get a sound, not a banner.</p>
+              </div>
+            </li>
+            <li>
+              <span class="num">04</span>
+              <div>
+                <h3>It rings, it doesn't talk</h3>
+                <p>A block ending plays a short tone, not a notification. Five built-in sounds, a separate
+                  one for block-end and break-end, a volume slider — or point it at your own audio file.</p>
+              </div>
+            </li>
+            <li>
+              <span class="num">05</span>
+              <div>
+                <h3>Presets are just actions</h3>
+                <p><strong>Custom…</strong> runs any minutes you like and can keep them as a preset. From then
+                  on it is an ordinary node in your tree, edited with the same wizard as everything else — add a
+                  <code>7 / 3</code> if that's your rhythm.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="matrix reveal">
+        <div class="matrix-head">
+          <h3 class="matrix-title">And a board for deciding what earns the next block.</h3>
+          <p class="matrix-note">An Eisenhower matrix in Settings — type straight into a quadrant, then move
+            cards as reality changes: drag them, or use the button on the card if you'd rather not. ⏱ on one
+            starts a focus block <em>on that task</em>, and its name shows in the bud's pill, so what you
+            committed to is never more than a hover away.
+            <span class="matrix-hint">Go on — drag one.</span>
+          </p>
+        </div>
+
+        <div class="quad-grid" id="quadGrid">
+          <section class="quad" data-q="do" style="--q:#e5484d">
+            <header><span class="quad-dot"></span>
+              <div><span class="quad-name">Do first</span><span class="quad-sub">Urgent + important</span></div>
+            </header>
+            <div class="quad-body">
+              <article class="tcard" draggable="true"><i></i><span>Ship 1.2.0</span></article>
+              <article class="tcard" draggable="true"><i></i><span>Fix the Wayland crash</span></article>
+            </div>
+          </section>
+          <section class="quad" data-q="plan" style="--q:#7dd3fc">
+            <header><span class="quad-dot"></span>
+              <div><span class="quad-name">Schedule</span><span class="quad-sub">Important, not urgent</span></div>
+            </header>
+            <div class="quad-body">
+              <article class="tcard" draggable="true"><i></i><span>Rewrite the docs</span></article>
+              <article class="tcard is-done" draggable="true"><i></i><span>Learn the new API</span></article>
+            </div>
+          </section>
+          <section class="quad" data-q="delegate" style="--q:#d8a72a">
+            <header><span class="quad-dot"></span>
+              <div><span class="quad-name">Delegate</span><span class="quad-sub">Urgent, not important</span></div>
+            </header>
+            <div class="quad-body">
+              <article class="tcard" draggable="true"><i></i><span>Reply on that PR</span></article>
+            </div>
+          </section>
+          <section class="quad" data-q="drop" style="--q:#6b7180">
+            <header><span class="quad-dot"></span>
+              <div><span class="quad-name">Eliminate</span><span class="quad-sub">Neither — say no</span></div>
+            </header>
+            <div class="quad-body">
+              <article class="tcard" draggable="true"><i></i><span>Reorganise the folders again</span></article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────  HOTKEYS  ───────────────────────────── -->
+    <section class="section band" id="keys">
+      <div class="head reveal">
+        <p class="kicker">06 — Global hotkeys</p>
         <h2>Never touch the bud <em>at all.</em></h2>
         <p class="lede">Four global bindings are always registered, even with the bud hidden in the tray.
           Every one of them is rebindable.</p>
@@ -421,10 +552,10 @@
     </section>
 
     <!-- ─────────────────────────────  SETTINGS  ───────────────────────────── -->
-    <section class="section band" id="settings">
+    <section class="section" id="settings">
       <div class="head reveal">
-        <p class="kicker">06 — Settings</p>
-        <h2>Six tabs. <em>Then get out of the way.</em></h2>
+        <p class="kicker">07 — Settings</p>
+        <h2>Seven tabs. <em>Then get out of the way.</em></h2>
         <p class="lede">A proper resizable window — not the transient dial — for the rare moments you
           actually need to edit something.</p>
       </div>
@@ -434,6 +565,7 @@
           <button class="tab-btn is-on" role="tab" aria-selected="true" data-tab="t-actions">Actions</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-appearance">Appearance</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-hotkeys">Hotkeys &amp; Input</button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-focus">Focus &amp; Tasks</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-profiles">Profiles</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-general">General &amp; Startup</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-about">About &amp; Updates</button>
@@ -441,7 +573,7 @@
         <div class="tab-body">
           <div class="tab-panel is-on" id="t-actions" role="tabpanel">
             <h3>Your whole tree, searchable.</h3>
-            <p>An outline of every folder and action. Drag to reorder or reparent, star a favourite, pin the ones you
+            <p>An outline of every folder and action. Drag to reorder or reparent, pin the ones you
               want on the scroll chip, and hit <strong>Run now</strong> to test any node before it ever goes live on the
               dial.</p>
           </div>
@@ -452,14 +584,23 @@
           </div>
           <div class="tab-panel" id="t-hotkeys" role="tabpanel">
             <h3>Rebind everything.</h3>
-            <p>All four global hotkeys, plus per-node quickfire bindings. Choose what double-click does (dictate or your
-              favourite) and what long-press does (read aloud or a second favourite), independently. Tune hover-to-open
+            <p>All four global hotkeys, plus per-node quickfire bindings — and if another app already owns a
+              combination, Bloom says so instead of leaving a key that looks bound and never fires. Tune hover-to-open
               delay, edge snapping and scroll-cycling.</p>
+          </div>
+          <div class="tab-panel" id="t-focus" role="tabpanel">
+            <h3>The timer, and what earns it.</h3>
+            <p>The running block with its ring, the presets behind it, whether breaks start on their own, and
+              which sound each phase change plays. Underneath, the <strong>Eisenhower matrix</strong> — four
+              quadrants you type into and drag between, with a ⏱ on every card that starts a focus block on
+              that one task.</p>
           </div>
           <div class="tab-panel" id="t-profiles" role="tabpanel">
             <h3>Whole setups, swapped instantly.</h3>
-            <p>Save your tree, favourites, pinned actions and appearance as a named profile, then switch between them.
-              Work, gaming, presentation — a different dial for each context, one click apart.</p>
+            <p>Save your tree and pinned actions as a named profile, then switch between them.
+              Work, gaming, presentation — a different dial for each context, one click apart. Your accent is
+              <strong>not</strong> part of a profile: set it once in Appearance and every profile follows, so
+              switching never repaints the app. The four <strong>starter templates</strong> live here too.</p>
           </div>
           <div class="tab-panel" id="t-general" role="tabpanel">
             <h3>Startup and behaviour.</h3>
@@ -470,16 +611,48 @@
             <h3>Updates on your terms.</h3>
             <p>Version, licence, and an updater that checks but never downloads behind your back — you approve every
               update, with a live progress readout. Pick the <strong>stable</strong> or <strong>beta</strong> channel,
-              or turn auto-checking off entirely.</p>
+              or turn auto-checking off entirely. When there is something to install,
+              <strong>what changed is listed right under the button</strong> — added, fixed, the lot — folded into the
+              page rather than thrown up as a popup, and collapsing to a single line once you've read it. Already up
+              to date? It shows what the version you're running brought, instead of nothing at all.</p>
           </div>
         </div>
+      </div>
+
+      <div class="firstrun reveal">
+        <div class="fr-copy">
+          <h3 class="fr-title">And it doesn't start empty.</h3>
+          <p class="fr-note">The welcome cards end with two questions — what your day mostly looks like, and how
+            long you like to work. Bloom then starts you on the matching setup instead of a generic one. All three
+            land in Profiles either way, so nothing is closed off. Skip the questions and you get the stock tree,
+            untouched.</p>
+        </div>
+        <div class="fr-cards">
+          <article class="fr-card">
+            <span class="fr-name">Maker</span>
+            <span class="fr-for">Developers, designers, anyone who builds</span>
+            <span class="fr-has">Editor · terminals · localhost · docs · long blocks</span>
+          </article>
+          <article class="fr-card">
+            <span class="fr-name">Coordinator</span>
+            <span class="fr-for">Managers, founders, people-shaped days</span>
+            <span class="fr-has">Mail · calendar · meet · start-my-day · snippets</span>
+          </article>
+          <article class="fr-card">
+            <span class="fr-name">Explorer</span>
+            <span class="fr-for">Students, writers, creators, everyday desktops</span>
+            <span class="fr-has">Notes · drive · media keys · study sprints</span>
+          </article>
+        </div>
+        <p class="fr-tour">Open Settings for the first time and a short guided tour spotlights each tab and says
+          what lives there. Replay it whenever from <strong>About → Take the tour</strong>.</p>
       </div>
     </section>
 
     <!-- ─────────────────────────────  CRAFT  ───────────────────────────── -->
-    <section class="section" id="craft">
+    <section class="section band" id="craft">
       <div class="head reveal">
-        <p class="kicker">07 — Under it all</p>
+        <p class="kicker">08 — Under it all</p>
         <h2>The boring parts, <em>done properly.</em></h2>
       </div>
 
@@ -525,9 +698,9 @@
     </section>
 
     <!-- ─────────────────────────────  DOWNLOAD  ───────────────────────────── -->
-    <section class="section band" id="download">
+    <section class="section" id="download">
       <div class="head reveal">
-        <p class="kicker">08 — Get Bloom</p>
+        <p class="kicker">09 — Get Bloom</p>
         <h2>Grab the build <em>for your desktop.</em></h2>
         <p class="lede">The Whisper voice model and the Linux window tooling are bundled into the
           installer. Nothing else to download, nothing to configure.</p>

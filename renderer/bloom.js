@@ -20,6 +20,7 @@
     hover: null,         // {ri, ni}
     focus: null,         // {ri, ni}
     chip: { active: false, idx: 0, timer: null },
+    focusTip: false,
     toastCount: 0,
     palOpen: false,
     ctxOpen: false,
@@ -485,7 +486,7 @@
         const rOut = r + ns / 2 + 12 * s;
         const dIn = Math.asin(gapPx / rIn);
         const dOut = Math.asin(gapPx / rOut);
-        
+
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         ring.els.forEach((el, i) => {
           const a = ring.layout.angles[i];
@@ -493,7 +494,7 @@
           const endA_in = a + half - dIn;
           const startA_out = a - half + dOut;
           const endA_out = a + half - dOut;
-          
+
           const seg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           const cls = el.classList;
           const hot = cls.contains('hot') || cls.contains('kfocus');
@@ -669,11 +670,20 @@
   });
 
   // ---- actions ----
-  function runNode(node, el) {
+
+  function runOnRelease(fn) {
+    let fired = false;
+    const go = () => { if (!fired) { fired = true; fn(); } };
+    window.addEventListener('mouseup', go, { once: true });
+    setTimeout(go, 400);
+  }
+
+  function runNode(node, el, via) {
     if (node.type === 'folder') return;
     // close instantly, run in the background; failures surface as toasts
     el?.classList.add('flash-ok');
-    window.bloom.execute(node);
+    if (via === 'mouse') runOnRelease(() => window.bloom.execute(node));
+    else window.bloom.execute(node);
     setTimeout(() => closeAll(), dur(150));
   }
 
@@ -687,7 +697,7 @@
       openRing(node, ri, ni, true, via === 'key');
       return;
     }
-    runNode(node, ring.els[ni]);
+    runNode(node, ring.els[ni], via);
   }
 
   document.addEventListener('mousedown', e => {
@@ -862,6 +872,76 @@
     syncUI();
   }
 
+  // ---- focus tip (hover the pomodoro ring) ----
+  // The bud window is ~80px wide, far too small for a readable tooltip, so the
+  // overlay draws it — same trick the scroll-chip uses. One dot, one number.
+  const focusTipEl = $('#focus-tip');
+  const PHASE_COLOR = { focus: '#34D399', break: '#E5484D', paused: '#6B7180' };
+  const phaseColor = s => s.paused ? PHASE_COLOR.paused : (s.phase === 'break' ? PHASE_COLOR.break : PHASE_COLOR.focus);
+  function fmtLeft(ms) {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+  function renderFocusTip(s) {
+    focusTipEl.style.setProperty('--ft-color', phaseColor(s));
+    focusTipEl.innerHTML = `<i class="ft-dot"></i><span class="ft-time">${fmtLeft(s.remainMs)}</span>`;
+    focusTipEl.style.left = state.bud.x + 'px';
+    focusTipEl.style.top = (state.bud.y - budR() - 14) + 'px';
+  }
+
+  // ---- timer chimes ----
+  // Synthesized, so no audio files ship and nothing depends on a codec being present.
+  // A partial is {f: Hz, t: start offset, d: duration, g: gain, w: waveform}.
+  const TONES = {
+    chime: [{ f: 880, d: 0.5 }, { f: 1318.5, t: 0.11, d: 0.62 }],
+    bell: [{ f: 659.3, d: 1.15 }, { f: 1978, d: 0.7, g: 0.22 }],
+    marimba: [{ f: 523.3, d: 0.3, w: 'triangle' }, { f: 784, t: 0.13, d: 0.36, w: 'triangle' }],
+    blip: [{ f: 1180, d: 0.09, g: 0.3, w: 'square' }, { f: 1560, t: 0.1, d: 0.09, g: 0.26, w: 'square' }],
+    gong: [{ f: 196, d: 1.9 }, { f: 294, t: 0.02, d: 1.7, g: 0.45 }, { f: 330.5, t: 0.05, d: 1.5, g: 0.28 }]
+  };
+  let actx = null, fileAudio = null, soundsPlayed = 0;
+  function playSound(o) {
+    soundsPlayed++;
+    const vol = Math.max(0, Math.min(1, o.volume ?? 0.7));
+    if (!o.tone || o.tone === 'silent' || !vol) return;
+    if (String(o.tone).startsWith('file:')) {
+      try {
+        fileAudio?.pause();
+        fileAudio = new Audio('file://' + String(o.tone).slice(5));
+        fileAudio.volume = vol;
+        fileAudio.play().catch(() => playTone('chime', vol));   // unreadable/unsupported → fall back
+      } catch { playTone('chime', vol); }
+      return;
+    }
+    playTone(o.tone, vol);
+  }
+  function playTone(name, vol) {
+    try {
+      actx = actx || new AudioContext();
+      if (actx.state === 'suspended') actx.resume();
+      const now = actx.currentTime;
+      for (const p of TONES[name] || TONES.chime) {
+        const osc = actx.createOscillator(), gain = actx.createGain();
+        osc.type = p.w || 'sine';
+        osc.frequency.value = p.f;
+        const at = now + (p.t || 0), peak = Math.max(0.0002, vol * (p.g ?? 0.55));
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(peak, at + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + p.d);
+        osc.connect(gain).connect(actx.destination);
+        osc.start(at);
+        osc.stop(at + p.d + 0.05);
+      }
+    } catch { /* no audio device — a missed chime is not worth an error */ }
+  }
+  window.bloom.on('play-sound', playSound);
+  function focusTip(s) {
+    state.focusTip = !!s.on && s.phase !== 'idle';
+    if (state.focusTip) { renderFocusTip(s); focusTipEl.classList.add('show'); }
+    else focusTipEl.classList.remove('show');
+    syncUI();
+  }
+
   // file dropped on the bud → contextual mini-ring (path arrives via main)
   function fileRingFor(p) {
     const dir = p.replace(/[/\\][^/\\]*$/, '') || p;
@@ -962,6 +1042,51 @@
       li.addEventListener('click', () => execPal(+li.dataset.i));
     });
   }
+  // The dial's "Custom…" block. Same shell as the palette, one field: minutes to
+  // focus, optionally "/ break". Starting a block from the dial shouldn't drag the
+  // whole Settings window open.
+  function openFocusPrompt(rect) {
+    if (state.open) closeAll();
+    state.palOpen = true;
+    stage.classList.add('pal');
+    if (rect && rect.width) {
+      paletteEl.style.left = Math.round(rect.x + rect.width / 2) + 'px';
+      paletteEl.style.top = Math.round(rect.y + rect.height * 0.2) + 'px';
+      stage.style.setProperty('--ox', Math.round(rect.x + rect.width / 2) + 'px');
+      stage.style.setProperty('--oy', Math.round(rect.y + rect.height * 0.3) + 'px');
+    } else {
+      paletteEl.style.left = ''; paletteEl.style.top = '';
+      stage.style.setProperty('--ox', '50%'); stage.style.setProperty('--oy', '30%');
+    }
+    const last = (cfg.focus && cfg.focus.lastPreset) || { focusMin: 25, breakMin: 5 };
+    paletteEl.innerHTML =
+      `<div class="pal-head">${IC.markup('timer', 18)}<input id="pal-input" spellcheck="false"
+         placeholder="${last.focusMin} / ${last.breakMin}" aria-label="Focus and break minutes"></div>` +
+      `<ul id="pal-list"><li class="pal-empty">Minutes to focus, or <b>focus / break</b> — Enter starts it.</li></ul>`;
+    paletteEl.classList.add('show');
+    const input = $('#pal-input');
+    input.focus();
+    const start = () => {
+      const raw = input.value.trim() || `${last.focusMin}/${last.breakMin}`;
+      const [f, b] = raw.split(/[^\d]+/).filter(x => x !== '').map(Number);
+      const focusMin = Math.round(f), breakMin = b === undefined ? last.breakMin : Math.round(b);
+      if (!(focusMin >= 1 && focusMin <= 180) || !(breakMin >= 0 && breakMin <= 90)) {
+        input.value = ''; input.placeholder = '1–180 focus, 0–90 break';
+        input.classList.add('bad'); setTimeout(() => input.classList.remove('bad'), 900);
+        return;
+      }
+      closePalette();
+      window.bloom.focusStart({ focusMin, breakMin });
+      toast('ok', `${focusMin} / ${breakMin}`, 'Focus block started');
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); start(); }
+      else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
+    });
+    openBackdrop();
+    syncUI();
+  }
+
   function renderPalSel() {
     [...$('#pal-list').children].forEach((li, i) => li.classList.toggle('sel', i === palSel));
     $('#pal-list').children[palSel]?.scrollIntoView({ block: 'nearest' });
@@ -1078,7 +1203,7 @@
     window.bloom.uiState({
       ringOpen: state.open,
       uiActive: state.palOpen || state.ctxOpen || state.cheatOpen,
-      displayOnly: state.chip.active || state.toastCount > 0
+      displayOnly: state.chip.active || state.focusTip || state.toastCount > 0
     });
   }
 
@@ -1089,6 +1214,7 @@
     stage.style.setProperty('--oy', p.y + 'px');
     if (state.open) refreshVisibility('resize');
     if (state.chip.active) renderChip(pinnedNodes());
+    if (state.focusTip) { focusTipEl.style.left = p.x + 'px'; focusTipEl.style.top = (p.y - budR() - 16) + 'px'; }
     if (state.toastCount) positionToasts();          // toasts ride along with the bud
   });
 
@@ -1102,9 +1228,16 @@
   window.bloom.on('close-ring', () => closeAll());
   window.bloom.on('pop-ring', () => popRing());
   window.bloom.on('summon-palette', d => { state.palOpen ? closePalette() : openPalette(d && d.rect); });
+  window.bloom.on('focus-custom', d => { if (state.palOpen) closePalette(); openFocusPrompt(d && d.rect); });
   window.bloom.on('show-ctx', () => showCtx(state.bud.x + budR() + 8, state.bud.y + 8));
   window.bloom.on('chip-wheel', d => chipWheel(d.dir));
   window.bloom.on('chip-run', () => { if (state.chip.active) runChip(); });
+  window.bloom.on('focus-tip', s => focusTip(s));
+  window.bloom.on('focus-status', s => {
+    if (!state.focusTip) return;
+    if (s.phase === 'idle') focusTip({ on: false, phase: 'idle' });   // timer ended under the cursor
+    else renderFocusTip(s);
+  });
 
   window.bloom.on('config-changed', c => {
     cfg = c;
@@ -1128,6 +1261,7 @@
   // hooks for the CDP test harness
   window.__bloom = {
     state, openRoot, closeAll, popRing, openPalette,
+    sound: () => ({ played: soundsPlayed, ctx: actx && actx.state }),
     cfg: () => cfg,
     hit: (x, y) => hitTest(x, y),
     ringInfo: () => state.stack.map(r => ({

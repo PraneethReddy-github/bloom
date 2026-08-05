@@ -12,7 +12,7 @@
   let modalOpen = false;
   let midEdit = false; // true while a text input inside a tab is focused
 
-  const TABS = ['actions', 'appearance', 'hotkeys', 'profiles', 'general', 'about'];
+  const TABS = ['actions', 'appearance', 'hotkeys', 'focus', 'profiles', 'general', 'about'];
 
   // ---- utils ----
   function debounce(fn, ms) {
@@ -49,6 +49,8 @@
 
   let selfPatchAt = 0; // suppress echo of our own config-changed events
   let aboutUpdateHandler = null; // set while the About tab is mounted
+  let hotkeyFailures = {};       // accelerators the OS refused, from main
+  let lastUpdateStatus = null;   // replayed on mount so notes survive a tab switch
   async function patch(partial) { selfPatchAt = Date.now(); cfg = await bloom.patchConfig(partial); selfPatchAt = Date.now(); return cfg; }
   async function saveTree() { selfPatchAt = Date.now(); cfg = await bloom.saveTree(cfg.root); selfPatchAt = Date.now(); return cfg; }
 
@@ -95,7 +97,7 @@
   const TYPE_LABEL = {
     folder: 'Folder', launch_app: 'App', open_url: 'URL', terminal: 'Terminal',
     system_toggle: 'Toggle', media: 'Media', snippet: 'Snippet', macro: 'Macro',
-    script: 'Script', webhook: 'Webhook', open_path: 'Path', bloom: 'Bloom'
+    script: 'Script', webhook: 'Webhook', open_path: 'Path', bloom: 'Bloom', focus: 'Focus'
   };
 
   // ---- toasts ----
@@ -182,6 +184,7 @@
     if (tab === 'actions') renderActions(pane);
     else if (tab === 'appearance') renderAppearance(pane);
     else if (tab === 'hotkeys') renderHotkeys(pane);
+    else if (tab === 'focus') renderFocus(pane);
     else if (tab === 'profiles') renderProfiles(pane);
     else if (tab === 'general') renderGeneral(pane);
     else if (tab === 'about') renderAbout(pane);
@@ -217,17 +220,21 @@
     { tab: 'hotkeys', sid: 'hk-palette', label: 'Command palette hotkey', kw: 'hotkey palette command search shortcut' },
     { tab: 'hotkeys', sid: 'quickfire', label: 'Quick-fire hotkeys', kw: 'quickfire quick fire action hotkey direct' },
     { tab: 'hotkeys', sid: 'hoverOpenDelay', label: 'Hover open delay', kw: 'hover delay sub ring open folder' },
-    { tab: 'hotkeys', sid: 'dblAction', label: 'Double-tap & hold actions', kw: 'double tap hold favourite favorite dictate read aloud voice gesture speech' },
     { tab: 'hotkeys', sid: 'scrollCycle', label: 'Scroll cycles pinned', kw: 'scroll wheel cycle pinned bud' },
     { tab: 'hotkeys', sid: 'edgeSnap', label: 'Edge snap', kw: 'edge snap screen bud position' },
     { tab: 'hotkeys', sid: 'budPinned', label: 'Pin bud position', kw: 'pin bud position lock drag' },
     { tab: 'hotkeys', sid: 'cheat', label: 'Ring shortcuts cheat sheet', kw: 'cheat sheet shortcuts keyboard ring keys' },
-    { tab: 'hotkeys', sid: 'dblFav', label: 'Double-tap favourite', kw: 'favourite favorite double tap star action' },
-    { tab: 'hotkeys', sid: 'holdFav', label: 'Hold favourite', kw: 'favourite favorite hold long press star action' },
+    { tab: 'hotkeys', sid: 'hk-dictate', label: 'Dictate', kw: 'dictate double tap speech to text voice gesture' },
+    { tab: 'hotkeys', sid: 'hk-speak', label: 'Read aloud', kw: 'hold long press read aloud speak text to speech gesture' },
     { tab: 'hotkeys', sid: 'voModel', label: 'Speech-to-text model', kw: 'voice whisper model dictation accuracy language speech' },
     { tab: 'hotkeys', sid: 'voVoice', label: 'Read-aloud voice', kw: 'voice tts text to speech read aloud speaker' },
     { tab: 'hotkeys', sid: 'voRate', label: 'Read-aloud speed', kw: 'voice tts rate speed read aloud faster slower' },
+    { tab: 'focus', sid: 'focus-timer', label: 'Focus timer', kw: 'pomodoro focus timer ring break minutes start pause stop 25 50' },
+    { tab: 'focus', sid: 'focus-prefs', label: 'Timer behaviour', kw: 'pomodoro auto break ring bud show' },
+    { tab: 'focus', sid: 'focus-sounds', label: 'Timer sounds', kw: 'sound ringtone chime bell gong volume audio alert' },
+    { tab: 'focus', sid: 'matrix', label: 'Eisenhower matrix', kw: 'task todo eisenhower matrix urgent important priority quadrant delegate schedule board' },
     { tab: 'profiles', sid: 'profiles-list', label: 'Profiles', kw: 'profile switch work gaming presentation save' },
+    { tab: 'profiles', sid: 'templates', label: 'Starter templates', kw: 'template starter default maker coordinator explorer preset profile setup' },
     { tab: 'general', sid: 'autostart', label: 'Launch at login', kw: 'autostart login startup launch boot' },
     { tab: 'general', sid: 'showOnStartup', label: 'Show bud on start', kw: 'show bud start startup visible' },
     { tab: 'general', sid: 'export', label: 'Export configuration', kw: 'export backup config json save' },
@@ -277,7 +284,7 @@
   }
 
   function tabTitle(t) {
-    return { actions: 'Actions', appearance: 'Appearance', hotkeys: 'Hotkeys & Input', profiles: 'Profiles', general: 'General & Startup', about: 'About & Updates' }[t] || t;
+    return { actions: 'Actions', appearance: 'Appearance', hotkeys: 'Hotkeys & Input', focus: 'Focus & Tasks', profiles: 'Profiles', general: 'General & Startup', about: 'About & Updates' }[t] || t;
   }
 
   function jumpToResult(r) {
@@ -374,8 +381,6 @@
         <button class="btn btn-ghost btn-sm" id="collapse-all" title="Collapse all">${icon('chevron-up', 13)}</button>
       </div>
       <div class="tree-legend">
-        <span class="lg-star lg-dbl">${icon('star', 13)} Runs on double-tap of the bud</span>
-        <span class="lg-star lg-hold">${icon('hold', 13)} Runs on hold of the bud</span>
         <span class="lg-tgl"><span class="lg-knob"></span> Enabled — off hides it from the ring</span>
       </div>
       <div id="tree" role="tree" aria-label="Action tree"></div>`;
@@ -450,7 +455,6 @@
   function rowHTML(node, depth, crumb) {
     const isFolder = node.type === 'folder';
     const disabled = node.enabled === false;
-    const fav = favKindOf(node.id);                  // '' | 'dbl' | 'hold'
     const isPinned = (cfg.pinnedIds || []).includes(node.id);
     const color = node.color ? ` style="color:${esc(node.color)}"` : '';
     return `
@@ -474,12 +478,6 @@
           <button class="icon-btn" data-act="down" title="Move down" aria-label="Move down">${icon('chevron-down', 14)}</button>
         </span>
         <span class="tr-fixed">
-          <button class="icon-btn fav-btn fav-dbl ${fav === 'dbl' ? 'fav-on' : ''}" data-act="star"
-                  title="${fav === 'dbl' ? 'Double-tap favourite — click to clear' : 'Make this the double-tap favourite'}"
-                  aria-label="Double-tap favourite" aria-pressed="${fav === 'dbl'}">${icon('star', 14)}</button>
-          <button class="icon-btn fav-btn fav-hold ${fav === 'hold' ? 'fav-on' : ''}" data-act="holdfav"
-                  title="${fav === 'hold' ? 'Hold favourite — click to clear' : 'Make this the hold favourite'}"
-                  aria-label="Hold favourite" aria-pressed="${fav === 'hold'}">${icon('hold', 14)}</button>
           <label class="tgl" title="${disabled ? 'Enable' : 'Disable'}">
             <input type="checkbox" data-act="enable" ${disabled ? '' : 'checked'} aria-label="Enabled" tabindex="-1">
             <span class="knob"></span>
@@ -553,8 +551,6 @@
           else if (act === 'del') deleteNode(id);
           else if (act === 'up') moveNode(id, -1);
           else if (act === 'down') moveNode(id, +1);
-          else if (act === 'star') toggleFavorite(id, 'dbl');
-          else if (act === 'holdfav') toggleFavorite(id, 'hold');
           else if (act === 'pin') togglePin(id);
         });
       });
@@ -614,27 +610,6 @@
     saveTree().then(renderTree);
   }
 
-  // Two independent favourite slots — one runs on a double-tap of the bud, the
-  // other on a hold. Each row has its own toggle for each, so two different
-  // actions can be favourited at once. One row can only hold one of the two.
-  function favKindOf(id) {
-    return cfg.favoriteId === id ? 'dbl' : cfg.holdFavoriteId === id ? 'hold' : '';
-  }
-  const FAV_SLOT = { dbl: 'favoriteId', hold: 'holdFavoriteId' };
-  function toggleFavorite(id, slot) {
-    const was = favKindOf(id);
-    const next = was === slot
-      ? { [FAV_SLOT[slot]]: null }                      // clicking the lit one clears it
-      : { [FAV_SLOT[slot]]: id, ...(was ? { [FAV_SLOT[was]]: null } : {}) };
-    const label = (findNode(id) || {}).label || 'This action';
-    patch(next).then(() => {
-      renderTree();
-      toast(was === slot ? `“${label}” is no longer a favourite`
-        : `“${label}” now runs when you ${slot === 'hold' ? 'hold' : 'double-tap'} the bud`,
-        { kind: was === slot ? '' : 'ok' });
-    });
-  }
-
   function togglePin(id) {
     const pins = (cfg.pinnedIds || []).slice();
     const i = pins.indexOf(id);
@@ -667,14 +642,8 @@
     if (!parent || !n) return;
     const idx = parent.children.indexOf(n);
     parent.children.splice(idx, 1);
-    // both favourite slots can point into the deleted subtree
-    const held = k => cfg[k] === id || !!(cfg[k] && n.children && findNode(cfg[k], n));
-    const clear = {};
-    if (held('favoriteId')) clear.favoriteId = null;
-    if (held('holdFavoriteId')) clear.holdFavoriteId = null;
-    undoStash = { node: deepClone(n), parentId: parent.id, index: idx, favoriteId: cfg.favoriteId, holdFavoriteId: cfg.holdFavoriteId };
-    const doSave = Object.keys(clear).length ? patch(clear).then(() => saveTree()) : saveTree();
-    doSave.then(() => {
+    undoStash = { node: deepClone(n), parentId: parent.id, index: idx };
+    saveTree().then(() => {
       renderTree();
       toast(`Deleted "${n.label || n.id}"`, {
         undo: () => {
@@ -683,11 +652,7 @@
           const p = findNode(stash.parentId) || cfg.root;
           p.children = p.children || [];
           p.children.splice(Math.min(stash.index, p.children.length), 0, stash.node);
-          const back = {};
-          if (stash.favoriteId && !cfg.favoriteId) back.favoriteId = stash.favoriteId;
-          if (stash.holdFavoriteId && !cfg.holdFavoriteId) back.holdFavoriteId = stash.holdFavoriteId;
-          const restore = Object.keys(back).length ? patch(back).then(() => saveTree()) : saveTree();
-          restore.then(renderTree);
+          saveTree().then(renderTree);
         }
       });
     });
@@ -905,6 +870,7 @@
     { type: 'script', name: 'Script', icon: 'code', desc: 'Run your own .sh / .py / .ps1' },
     { type: 'webhook', name: 'Webhook', icon: 'link', desc: 'Call a URL — GET or POST' },
     { type: 'macro', name: 'Macro', icon: 'zap', desc: 'A chain of steps, run in order' },
+    { type: 'focus', name: 'Focus Timer', icon: 'timer', desc: 'Start, pause or stop a pomodoro' },
     { type: 'bloom', name: 'Bloom', icon: 'bloom', desc: 'Built-in Bloom action' }
   ];
   const SWATCHES = ['#5EEAD4', '#7DD3FC', '#A78BFA', '#F472B6', '#FB923C', '#FBBF24', '#34D399'];
@@ -996,6 +962,7 @@
       await saveTree();
       close();
       renderTree();
+      if (currentTab === 'focus') renderTab('focus');   // presets live in the tree, shown there too
       toast(editing ? `Saved "${draft.label}"` : `Added "${draft.label}"`, { kind: 'ok' });
     }
 
@@ -1051,6 +1018,7 @@
         case 'script': return { file: '', args: '' };
         case 'webhook': return { url: '', method: 'GET', body: '' };
         case 'macro': return { steps: [] };
+        case 'focus': return { cmd: 'start', focusMin: 25, breakMin: 5 };
         case 'bloom': return { cmd: 'settings' };
         default: return {};
       }
@@ -1135,12 +1103,31 @@
         html += `<div id="macro-steps"></div>
           <button class="btn" id="macro-add">${icon('plus', 13)} Add step</button>
           <div class="note">Steps run in order, top to bottom.</div>`;
+      } else if (t === 'focus') {
+        const cmd = p.cmd || 'start';
+        html += `
+          <div class="f-field"><label for="wp-fcmd">What it does</label>
+            <select id="wp-fcmd" class="in sel" data-p="cmd">
+              <option value="start" ${cmd === 'start' ? 'selected' : ''}>Start a timer</option>
+              <option value="pause" ${cmd === 'pause' ? 'selected' : ''}>Pause / resume the running timer</option>
+              <option value="stop" ${cmd === 'stop' ? 'selected' : ''}>Stop the timer</option>
+              <option value="custom" ${cmd === 'custom' ? 'selected' : ''}>Open Focus settings to pick minutes</option>
+            </select></div>
+          <div class="f-row2" id="wp-fmins" ${cmd === 'start' ? '' : 'hidden'}>
+            <div class="f-field"><label for="wp-fmin">Focus minutes</label>
+              <input id="wp-fmin" class="in" type="number" min="1" max="180" data-p="focusMin" value="${esc(String(p.focusMin ?? 25))}">
+              <span class="hint-err" data-err="focusMin" hidden>Between 1 and 180</span></div>
+            <div class="f-field"><label for="wp-bmin">Break minutes</label>
+              <input id="wp-bmin" class="in" type="number" min="0" max="90" data-p="breakMin" value="${esc(String(p.breakMin ?? 5))}">
+              <span class="hint">0 for no break</span></div>
+          </div>`;
       } else if (t === 'bloom') {
         html += `
           <div class="f-field"><label for="wp-cmd2">Command</label>
             <select id="wp-cmd2" class="in sel" data-p="cmd">
-              <option value="settings" ${p.cmd !== 'palette' ? 'selected' : ''}>Open this settings window</option>
-              <option value="palette" ${p.cmd === 'palette' ? 'selected' : ''}>Open the command palette</option></select></div>`;
+              <option value="settings" ${p.cmd === 'settings' || !p.cmd ? 'selected' : ''}>Open this settings window</option>
+              <option value="palette" ${p.cmd === 'palette' ? 'selected' : ''}>Open the command palette</option>
+              <option value="tasks" ${p.cmd === 'tasks' ? 'selected' : ''}>Open the Eisenhower task board</option></select></div>`;
       }
       html += '</div>';
       body.innerHTML = html;
@@ -1148,6 +1135,20 @@
     }
 
     function wireStep2(t, p) {
+      if (t === 'focus') {
+        const cs = $('#wp-fcmd', body), mins = $('#wp-fmins', body);
+        const sync = () => {
+          mins.hidden = cs.value !== 'start';
+          if (labelTouched) return;
+          draft.label = cs.value === 'start'
+            ? `${$('#wp-fmin', body).value || 25} / ${$('#wp-bmin', body).value || 5}`
+            : { pause: 'Pause', stop: 'Stop', custom: 'Custom…' }[cs.value];
+        };
+        cs.addEventListener('change', sync);
+        $('#wp-fmin', body).addEventListener('input', sync);
+        $('#wp-bmin', body).addEventListener('input', sync);
+        sync();
+      }
       if (t === 'launch_app') {
         $('#wp-browse', body).addEventListener('click', () => openAppBrowser(picked => {
           $('#wp-command', body).value = picked.command;
@@ -1292,6 +1293,14 @@
         if (!/^https?:\/\//i.test(p.url)) return fail('url', '[data-p=url]');
       } else if (t === 'bloom') {
         p.cmd = val('[data-p=cmd]') || 'settings';
+      } else if (t === 'focus') {
+        p.cmd = val('[data-p=cmd]') || 'start';
+        if (p.cmd === 'start') {
+          p.focusMin = Math.round(Number(val('[data-p=focusMin]')));
+          p.breakMin = Math.round(Number(val('[data-p=breakMin]')));
+          if (!Number.isFinite(p.focusMin) || p.focusMin < 1 || p.focusMin > 180) return fail('focusMin', '[data-p=focusMin]');
+          if (!Number.isFinite(p.breakMin) || p.breakMin < 0 || p.breakMin > 90) p.breakMin = 5;
+        } else { delete p.focusMin; delete p.breakMin; }
       }
       // macro: steps array is synced live by the editor
       return true;
@@ -1360,7 +1369,7 @@
     briefcase: 'work job office', flame: 'fire hot streak', pin: 'location map place',
     cart: 'shop shopping buy', text: 'font type typography', wrench: 'tool fix repair',
     'trending-up': 'growth chart stats', 'bar-chart': 'stats graph analytics',
-    'pie-chart': 'stats graph analytics', hold: 'press long-press favourite'
+    'pie-chart': 'stats graph analytics', hold: 'press long-press'
   };
 
   function renderIconPicker(container, current, onPick) {
@@ -1596,7 +1605,7 @@
     const dim = a.dim ?? 0.35;
     pv.innerHTML = `
       <div class="pv-dim" style="opacity:${dim}"></div>
-      <svg class="pv-svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" fill="none">
+      <svg class="pv-svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" preserveAspectRatio="xMidYMid meet" fill="none">
         ${seg}
         <circle cx="${c}" cy="${c}" r="${budR.toFixed(1)}" fill="#1a1b1d" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" opacity="${cfg.bud.idleOpacity}"/>
         <g transform="translate(${(c - budR * 0.62).toFixed(1)},${(c - budR * 0.62).toFixed(1)})" style="color:${acc}" opacity="${cfg.bud.idleOpacity}">${icon('bloom', Math.round(budR * 1.24))}</g>
@@ -1628,18 +1637,27 @@
     return acc.split('+').map(k => `<span class="key-chip">${esc(k)}</span>`).join('');
   }
 
+  // Read the physical key, not the character it produced: with Shift held, e.key for
+  // the 1 key is "!", and Electron cannot register Control+Shift+!. e.code is layout-
+  // stable for letters/digits, so Ctrl+Shift+1 binds as Control+Shift+1 and works.
+  const NAMED_KEYS = ['Enter', 'Tab', 'Backspace', 'Delete', 'Home', 'End', 'PageUp', 'PageDown', 'Insert'];
+  const PUNCT = {
+    Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\',
+    Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backquote: '`'
+  };
   function keyName(e) {
+    const c = e.code || '';
+    if (/^Key[A-Z]$/.test(c)) return c.slice(3);
+    if (/^Digit[0-9]$/.test(c)) return c.slice(5);
+    if (/^Numpad[0-9]$/.test(c)) return 'num' + c.slice(6);
+    if (PUNCT[c]) return PUNCT[c];
     const k = e.key;
-    if (k === ' ') return 'Space';
-    if (k === 'ArrowUp') return 'Up';
-    if (k === 'ArrowDown') return 'Down';
-    if (k === 'ArrowLeft') return 'Left';
-    if (k === 'ArrowRight') return 'Right';
+    if (k === ' ' || c === 'Space') return 'Space';
+    if (/^Arrow(Up|Down|Left|Right)$/.test(k)) return k.slice(5);
+    if (/^F([1-9]|1[0-9]|2[0-4])$/.test(k)) return k;
+    if (NAMED_KEYS.includes(k)) return k;
     if (/^[a-z]$/i.test(k)) return k.toUpperCase();
     if (/^[0-9]$/.test(k)) return k;
-    if (/^F([1-9]|1[0-9]|2[0-4])$/.test(k)) return k;
-    if (['Enter', 'Tab', 'Backspace', 'Delete', 'Home', 'End', 'PageUp', 'PageDown', 'Insert'].includes(k)) return k;
-    if (k.length === 1) return k.toUpperCase();
     return null;
   }
 
@@ -1691,10 +1709,6 @@
 
   let qfPending = []; // rows added but not yet bound: [{nodeId}]
 
-  function leafOptions(selectedId) {
-    return `<option value="">— none —</option>` + allLeaves().map(n =>
-      `<option value="${n.id}" ${n.id === selectedId ? 'selected' : ''}>${esc(n.label)} · ${esc(breadcrumb(n.id).join(' › ') || 'Root')}</option>`).join('');
-  }
 
   function renderHotkeys(pane) {
     const b = cfg.behavior || {};
@@ -1719,16 +1733,22 @@
           </div>
         </div>
         <div class="ctl-row" data-sid="hk-dictate" data-search="dictate voice speech to text hotkey">
-          <div class="ctl-label"><div class="t">Dictate (speech → text)</div><div class="s">Start/stop dictation anywhere; text lands at your cursor</div></div>
+          <div class="ctl-label"><div class="t">Dictate (speech → text)</div><div class="s">Or <b>double-tap the bud</b>. Text lands at your cursor.</div></div>
           <div class="ctl-input" style="flex-direction:column;align-items:flex-end;gap:4px">
-            <button class="keycap" id="kc-dictate" aria-label="Dictate hotkey"></button>
+            <div class="kc-wrap">
+              <button class="keycap" id="kc-dictate" aria-label="Dictate hotkey"></button>
+              <button class="icon-btn" id="kc-dictate-clr" title="Clear this hotkey" aria-label="Clear Dictate hotkey">${icon('x', 13)}</button>
+            </div>
             <span class="hint-err" id="kc-dictate-err" hidden></span>
           </div>
         </div>
         <div class="ctl-row" data-sid="hk-speak" data-search="read aloud text to speech hotkey">
-          <div class="ctl-label"><div class="t">Read aloud (text → speech)</div><div class="s">Speaks the text you have selected</div></div>
+          <div class="ctl-label"><div class="t">Read aloud (text → speech)</div><div class="s">Or <b>hold the bud</b>. Speaks the text you have selected.</div></div>
           <div class="ctl-input" style="flex-direction:column;align-items:flex-end;gap:4px">
-            <button class="keycap" id="kc-speak" aria-label="Read aloud hotkey"></button>
+            <div class="kc-wrap">
+              <button class="keycap" id="kc-speak" aria-label="Read aloud hotkey"></button>
+              <button class="icon-btn" id="kc-speak-clr" title="Clear this hotkey" aria-label="Clear Read aloud hotkey">${icon('x', 13)}</button>
+            </div>
             <span class="hint-err" id="kc-speak-err" hidden></span>
           </div>
         </div>
@@ -1760,38 +1780,8 @@
           </div>`).join('')}
       </div>
 
-      <h2 class="sec">Voice &amp; gestures</h2>
-      <p class="tab-desc" style="margin:-6px 0 14px">Pick what a double-tap and a hold on the bud do. The speech model downloads once on first use.</p>
-      <div class="card">
-        <div class="ctl-row" data-sid="dblAction" data-search="double tap double click action dictate favourite favorite">
-          <div class="ctl-label"><div class="t">Double-tap the bud</div><div class="s">Two quick taps</div></div>
-          <div class="ctl-input">
-            <select class="in sel" id="vo-dbl" style="width:170px">
-              <option value="dictate" ${(b.doubleClickAction || 'dictate') === 'dictate' ? 'selected' : ''}>Dictate (speech → text)</option>
-              <option value="favorite" ${b.doubleClickAction === 'favorite' ? 'selected' : ''}>Run a favourite</option>
-            </select>
-          </div>
-        </div>
-        <div class="ctl-row" data-sid="dblFav" id="vo-dbl-fav-row" data-search="double tap favourite favorite action" ${b.doubleClickAction === 'favorite' ? '' : 'hidden'}>
-          <div class="ctl-label"><div class="t">Double-tap favourite</div><div class="s">Action to run</div></div>
-          <div class="ctl-input"><select class="in sel" id="vo-dbl-fav" style="width:220px">${leafOptions(cfg.favoriteId)}</select></div>
-        </div>
-        <div class="ctl-row" data-sid="holdAction" data-search="hold press action read aloud speak favourite favorite">
-          <div class="ctl-label"><div class="t">Hold the bud</div><div class="s">Press and keep held</div></div>
-          <div class="ctl-input">
-            <select class="in sel" id="vo-hold" style="width:170px">
-              <option value="speak" ${(b.holdAction || 'speak') === 'speak' ? 'selected' : ''}>Read aloud (selection)</option>
-              <option value="favorite" ${b.holdAction === 'favorite' ? 'selected' : ''}>Run a favourite</option>
-            </select>
-          </div>
-        </div>
-        <div class="ctl-row" data-sid="holdFav" id="vo-hold-fav-row" data-search="hold favourite favorite action" ${b.holdAction === 'favorite' ? '' : 'hidden'}>
-          <div class="ctl-label"><div class="t">Hold favourite</div><div class="s">Action to run</div></div>
-          <div class="ctl-input"><select class="in sel" id="vo-hold-fav" style="width:220px">${leafOptions(cfg.holdFavoriteId)}</select></div>
-        </div>
-      </div>
-
       <h2 class="sec">Voice engine</h2>
+      <p class="tab-desc" style="margin:-6px 0 14px">The speech model downloads once on first use.</p>
       <div class="card">
         <div class="ctl-row" data-sid="voModel" data-search="whisper model speech recognition size accuracy speed">
           <div class="ctl-label"><div class="t">Speech-to-text model</div><div class="s">Bigger = more accurate but slower. Downloads once.</div></div>
@@ -1851,6 +1841,7 @@
 
     $('#qf-add', pane).addEventListener('click', () => { qfPending.push({ nodeId: null }); renderQfRows(); });
     renderQfRows();
+    paintHotkeyFailures(pane);
 
     // ---- voice hotkeys ----
     wireKeycap($('#kc-dictate', pane), {
@@ -1861,18 +1852,15 @@
       current: () => cfg.hotkeys.speak, excludeKey: 'speak', errEl: $('#kc-speak-err', pane),
       onDone: acc => patch({ hotkeys: { speak: acc } })
     });
+    // Dictate and read-aloud are optional; the ring and palette are not, so only these clear.
+    for (const k of ['dictate', 'speak']) {
+      $(`#kc-${k}-clr`, pane).addEventListener('click', () => {
+        if (!cfg.hotkeys[k]) return;
+        patch({ hotkeys: { [k]: null } }).then(() => renderTab('hotkeys'));
+      });
+    }
+    paintHotkeyFailures(pane);
 
-    // ---- voice & gesture selects ----
-    $('#vo-dbl', pane).addEventListener('change', e => {
-      $('#vo-dbl-fav-row', pane).hidden = e.target.value !== 'favorite';
-      patch({ behavior: { doubleClickAction: e.target.value } });
-    });
-    $('#vo-hold', pane).addEventListener('change', e => {
-      $('#vo-hold-fav-row', pane).hidden = e.target.value !== 'favorite';
-      patch({ behavior: { holdAction: e.target.value } });
-    });
-    $('#vo-dbl-fav', pane).addEventListener('change', e => patch({ favoriteId: e.target.value || null }).then(renderTree));
-    $('#vo-hold-fav', pane).addEventListener('change', e => patch({ holdFavoriteId: e.target.value || null }));
     $('#vo-model', pane).addEventListener('change', e => patch({ voice: { model: e.target.value } }));
 
     const rate = $('#vo-rate', pane), rateRo = $('#vo-rate-ro', pane);
@@ -1893,6 +1881,31 @@
     voiceSel.addEventListener('change', e => { patch({ voice: { ttsVoice: e.target.value } }); bloom.previewVoice(e.target.value); });
   }
 
+  // main reports which accelerators the OS refused to hand over. Without this the
+  // keycap looks bound and simply never fires.
+  function paintHotkeyFailures(pane) {
+    const root = pane || $('#tab-hotkeys');
+    if (!root || currentTab !== 'hotkeys') return;
+    const msg = acc => `${acc} is already taken by another app — pick a different combination.`;
+    for (const [key, id] of [['toggleRing', 'kc-ring'], ['palette', 'kc-palette'], ['dictate', 'kc-dictate'], ['speak', 'kc-speak']]) {
+      const err = $(`#${id}-err`, root), cap = $(`#${id}`, root);
+      if (!err || !cap) continue;
+      const bad = hotkeyFailures[key];
+      cap.classList.toggle('unbound', !!bad);
+      if (bad) { err.textContent = msg(bad); err.hidden = false; }
+      else if (err.dataset.k === 'os') { err.hidden = true; }
+      err.dataset.k = bad ? 'os' : '';
+    }
+    $$('.qf-row', root).forEach(row => {
+      const id = row.dataset.nodeId;
+      const err = $('[data-qf-err]', row), cap = $('[data-qf-cap]', row);
+      const bad = id && hotkeyFailures['qf:' + id];
+      if (!err || !cap) return;
+      cap.classList.toggle('unbound', !!bad);
+      if (bad) { err.textContent = msg(bad); err.hidden = false; }
+    });
+  }
+
   function renderQfRows() {
     const wrap = $('#qf-rows');
     if (!wrap) return;
@@ -1903,6 +1916,7 @@
       const node = r.nodeId ? findNode(r.nodeId) : null;
       const row = document.createElement('div');
       row.className = 'qf-row';
+      if (r.nodeId) row.dataset.nodeId = r.nodeId;
       row.innerHTML = `
         <div class="qf-picker">
           <button class="btn" data-qf-pick>${node ? `${icon(node.icon, 14)} <span style="overflow:hidden;text-overflow:ellipsis">${esc(node.label)}</span> <span class="hint">${esc(breadcrumb(node.id).join(' › '))}</span>` : 'Pick an action…'}</button>
@@ -1930,6 +1944,7 @@
           patch({ quickfire: { [r.nodeId]: acc } }).then(() => {
             if (wasPending) qfPending = qfPending.filter(p => p.nodeId !== r.nodeId);
             renderQfRows();
+            paintHotkeyFailures();
           });
         }
       });
@@ -1968,9 +1983,507 @@
     }, 0);
   }
 
+  // ==== FOCUS & TASKS TAB ====
+  // The timer itself runs in main; this tab is a view onto it plus the task board.
+  // Presets are ordinary tree nodes, so "edit a preset" reuses the action wizard.
+  const QUADRANTS = [
+    { q: 'do', title: 'Do first', sub: 'Urgent + important', color: '#e5484d' },
+    { q: 'plan', title: 'Schedule', sub: 'Important, not urgent', color: '#7DD3FC' },
+    { q: 'delegate', title: 'Delegate', sub: 'Urgent, not important', color: '#d8a72a' },
+    { q: 'drop', title: 'Eliminate', sub: 'Neither — say no', color: '#6b7180' }
+  ];
+  const QMAP = Object.fromEntries(QUADRANTS.map(q => [q.q, q]));
+  // Fixed everywhere, in every profile — the accent never leaks into timer state.
+  const PHASE_COLOR = { focus: '#34D399', break: '#E5484D', paused: '#6b7180' };
+  const TONES = [
+    ['chime', 'Chime'], ['bell', 'Soft bell'], ['marimba', 'Marimba'],
+    ['blip', 'Blip'], ['gong', 'Gong'], ['silent', 'Silent']
+  ];
+  let focusLiveHandler = null;   // set while this tab is mounted
+  let lastFocus = { phase: 'idle' };
+  let flSig = '';                // what the live card currently shows, so ticks stay cheap
+
+  const fmtLeft = ms => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+  function focusNodes() {
+    const out = [];
+    walk(cfg.root, n => { if (n.type === 'focus') out.push(n); });
+    return out;
+  }
+  const startPresets = () => focusNodes().filter(n => (n.params && n.params.cmd || 'start') === 'start');
+  // Where a new preset should land: next to the existing ones, else the Focus folder, else root.
+  function focusHomeId() {
+    const first = focusNodes()[0];
+    const parent = first ? findParent(first.id) : null;
+    return (parent && parent.id) || (findNode('focus') ? 'focus' : 'root');
+  }
+  const tasks = () => (cfg.tasks || []).slice();
+  const saveTasks = list => patch({ tasks: list });
+
+  // A picked file shows up as its own option so the select still reflects the truth.
+  function soundRow(key, title, sub) {
+    const sounds = (cfg.focus || {}).sounds || {};
+    const cur = sounds[key] || 'chime';
+    const isFile = String(cur).startsWith('file:');
+    const opts = TONES.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join('')
+      + (isFile ? `<option value="${esc(cur)}" selected>${esc(String(cur).slice(5).split(/[/\\]/).pop())}</option>` : '')
+      + `<option value="__pick">Choose a file…</option>`;
+    return `
+      <div class="ctl-row" data-sound="${key}">
+        <div class="ctl-label"><div class="t">${esc(title)}</div><div class="s">${esc(sub)}</div></div>
+        <div class="ctl-input">
+          <select class="in sel" data-sk="${key}" style="width:170px">${opts}</select>
+          <button class="btn btn-sm" data-play="${key}" title="Preview" aria-label="Preview ${esc(title)}">${icon('play', 12)}</button>
+        </div>
+      </div>`;
+  }
+
+  function renderFocus(pane) {
+    const f = cfg.focus || {};
+    const sounds = f.sounds || {};
+    pane.innerHTML = `
+      <h1>Focus &amp; Tasks</h1>
+      <p class="tab-desc">A pomodoro that draws itself as a ring around the bud, and a matrix for deciding what actually deserves the next block.</p>
+
+      <h2 class="sec first">Timer</h2>
+      <div class="card" data-sid="focus-timer" data-search="pomodoro timer focus break start pause stop minutes"><div id="focus-live"></div></div>
+
+      <div class="card" data-sid="focus-prefs" data-search="pomodoro auto break notify ring bud">
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Start the break automatically</div><div class="s">Otherwise the timer stops when the focus block ends</div></div>
+          <div class="ctl-input"><label class="tgl"><input type="checkbox" id="f-autobreak" ${f.autoStartBreak !== false ? 'checked' : ''} aria-label="Auto-start break"><span class="knob"></span></label></div>
+        </div>
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Show the ring on the bud</div><div class="s">Focus is green, breaks are red, paused is grey — the same in every profile</div></div>
+          <div class="ctl-input"><label class="tgl"><input type="checkbox" id="f-ring" ${f.showRing !== false ? 'checked' : ''} aria-label="Show ring"><span class="knob"></span></label></div>
+        </div>
+      </div>
+
+      <h2 class="sec">Sounds</h2>
+      <div class="card" data-sid="focus-sounds" data-search="sound ringtone chime bell alert volume audio notify">
+        ${soundRow('focusEnd', 'When a focus block ends', 'Plays as the break begins, or as the block closes out')}
+        ${soundRow('breakEnd', 'When a break ends', 'Your cue to start the next block')}
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Volume</div></div>
+          <div class="ctl-input">
+            <input type="range" class="sld" id="f-vol" min="0" max="100" step="5" value="${Math.round((sounds.volume ?? 0.7) * 100)}" aria-label="Sound volume">
+            <span class="readout" id="f-vol-val">${Math.round((sounds.volume ?? 0.7) * 100)}%</span>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="sec">Eisenhower matrix</h2>
+      <p class="tab-desc" style="margin-bottom:14px">
+        Type into a quadrant to add a task. <b>Drag a card</b> between quadrants as things change, or use its
+        ${icon('shuffle', 12)} button. ${icon('timer', 12)} starts a focus block on that one task — pick the length, or type your own. The
+        circle on the left marks it done.</p>
+      <div class="matrix" data-sid="matrix" data-search="task todo eisenhower urgent important quadrant delegate schedule"></div>`;
+
+    $('#f-autobreak', pane).addEventListener('change', e => patch({ focus: { autoStartBreak: e.target.checked } }));
+    $('#f-ring', pane).addEventListener('change', e => patch({ focus: { showRing: e.target.checked } }));
+    wireSounds(pane);
+
+    renderMatrix(pane);
+    flSig = '';                                     // fresh pane, nothing painted yet
+    focusLiveHandler = s => { lastFocus = s; paintFocusLive(s); };
+    bloom.focusGet().then(focusLiveHandler).catch(() => paintFocusLive(lastFocus));
+  }
+
+  function wireSounds(pane) {
+    const vol = () => ((cfg.focus || {}).sounds || {}).volume ?? 0.7;
+    $$('select[data-sk]', pane).forEach(sel => {
+      let prev = sel.value;
+      sel.addEventListener('change', async () => {
+        const key = sel.dataset.sk;
+        if (sel.value === '__pick') {
+          const file = await bloom.pickSound();
+          sel.value = prev;                                  // cancelled → nothing changed
+          if (!file) return;
+          await patch({ focus: { sounds: { [key]: 'file:' + file } } });
+          renderTab('focus');
+          toast(`Using ${file.split(/[/\\]/).pop()}`, { kind: 'ok' });
+          return;
+        }
+        prev = sel.value;
+        await patch({ focus: { sounds: { [key]: sel.value } } });
+        if (sel.value !== 'silent') bloom.previewSound({ tone: sel.value, volume: vol() });
+      });
+    });
+    $$('[data-play]', pane).forEach(b => b.addEventListener('click', () => {
+      const tone = $(`select[data-sk="${b.dataset.play}"]`, pane).value;
+      if (tone === 'silent' || tone === '__pick') { toast('Nothing to play', { kind: 'bad' }); return; }
+      bloom.previewSound({ tone, volume: vol() });
+    }));
+    const slider = $('#f-vol', pane), out = $('#f-vol-val', pane);
+    const paintVol = () => slider.style.setProperty('--pct', slider.value + '%');
+    paintVol();                                  // the accent fill every other slider has
+    slider.addEventListener('input', () => {
+      paintVol();
+      out.textContent = slider.value + '%';
+      debouncedPatch('focusVol', { focus: { sounds: { volume: slider.value / 100 } } }, 200);
+    });
+    slider.addEventListener('change', () => {
+      const tone = $('select[data-sk="focusEnd"]', pane).value;
+      if (tone !== 'silent' && tone !== '__pick') bloom.previewSound({ tone, volume: slider.value / 100 });
+    });
+  }
+
+  // ---- live timer ----
+  function paintFocusLive(s) {
+    const box = $('#focus-live');
+    if (!box) return;
+    const running = s.phase !== 'idle';
+    const onBreak = s.phase === 'break';
+    const color = PHASE_COLOR[s.paused ? 'paused' : s.phase] || PHASE_COLOR.focus;
+    const left = running && s.totalMs ? Math.max(0, Math.min(1, s.remainMs / s.totalMs)) : 0;
+    const C = 2 * Math.PI * 34;
+
+    // Once a second, only the numbers change — don't rebuild the buttons under the cursor.
+    const sig = running ? `run:${s.phase}:${s.paused}:${s.taskId}:${s.focusMin}:${s.breakMin}:${s.taskText || ''}` : 'idle';
+    if (sig === flSig && running) {
+      $('.fl-time', box).textContent = fmtLeft(s.remainMs);
+      box.querySelector('.fl-ring circle + circle').setAttribute('stroke-dashoffset', (C * (1 - left)).toFixed(1));
+      return;
+    }
+    flSig = sig;
+
+    // The presets row belongs on both faces of this card: mid-block you often want a
+    // different length, and hunting for Stop-then-start again is the long way round.
+    const presetsHTML = () => {
+      const presets = startPresets();
+      return `<div class="fl-presets">
+          ${presets.map(n => `<button class="fl-chip" data-f="${n.params.focusMin}" data-b="${n.params.breakMin}">
+              ${icon('timer', 13)} ${esc(n.params.focusMin)} <span class="sep">/</span> ${esc(n.params.breakMin)}</button>`).join('')
+            || '<span class="hint">No presets yet — add one below.</span>'}
+          <button class="fl-chip ghost" id="fl-custom">${icon('plus', 13)} Custom</button>
+        </div>`;
+    };
+    const wirePresets = () => {
+      $$('.fl-chip[data-f]', box).forEach(b => b.addEventListener('click', () =>
+        bloom.focusStart({ focusMin: +b.dataset.f, breakMin: +b.dataset.b }).then(focusLiveHandler)));
+      $('#fl-custom', box).addEventListener('click', customPresetModal);
+    };
+
+    if (!running) {
+      box.innerHTML = `
+        <div class="fl-idle">
+          <div class="fl-copy"><div class="t">No timer running</div><div class="s">Pick a block — the ring appears around the bud and counts down.</div></div>
+          ${presetsHTML()}
+        </div>`;
+      wirePresets();
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="fl-run">
+        <svg class="fl-ring" width="82" height="82" viewBox="0 0 82 82" fill="none" aria-hidden="true">
+          <circle cx="41" cy="41" r="34" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+          <circle cx="41" cy="41" r="34" stroke="${color}" stroke-width="6" stroke-linecap="round"
+                  stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - left)).toFixed(1)}"
+                  transform="rotate(-90 41 41)"/>
+        </svg>
+        <div class="fl-copy">
+          <div class="fl-time" style="color:${color}">${fmtLeft(s.remainMs)}</div>
+          <div class="s">${s.paused ? 'Paused' : (onBreak ? 'Break' : 'Focus')} · ${esc(s.focusMin)} / ${esc(s.breakMin)}${s.taskText ? ' · ' + esc(s.taskText) : ''}</div>
+        </div>
+        <span class="tr-spring" style="flex:1"></span>
+        <button class="btn" id="fl-pause">${icon(s.paused ? 'play' : 'pause', 13)} ${s.paused ? 'Resume' : 'Pause'}</button>
+        <button class="btn btn-danger" id="fl-stop">${icon('square', 13)} Stop</button>
+      </div>
+      <div class="fl-swap">
+        <span class="s">Start a different block instead</span>
+        ${presetsHTML()}
+      </div>`;
+    $('#fl-pause', box).addEventListener('click', () => bloom.focusPause().then(focusLiveHandler));
+    $('#fl-stop', box).addEventListener('click', () => bloom.focusStop().then(focusLiveHandler));
+    wirePresets();
+  }
+
+  // One-off block that isn't saved as a preset — the "＋" the dial points at.
+  // A one-off block, with the option to keep it. Minutes are validated rather than
+  // silently clamped — quietly turning a typo into 25 minutes is worse than saying so.
+  function customPresetModal() {
+    const last = (cfg.focus && cfg.focus.lastPreset) || { focusMin: 25, breakMin: 5 };
+    const { modal, close } = openModal(`
+      <div class="modal-head"><h2>Custom block</h2><div class="sub">Starts once. Save it to keep it in your Focus folder.</div></div>
+      <div class="modal-body"><div class="f-row2">
+        <div class="f-field"><label for="cp-f">Focus minutes</label>
+          <input id="cp-f" class="in" type="number" min="1" max="180" value="${last.focusMin}">
+          <span class="hint-err" data-err="f" hidden>1 to 180</span></div>
+        <div class="f-field"><label for="cp-b">Break minutes</label>
+          <input id="cp-b" class="in" type="number" min="0" max="90" value="${last.breakMin}">
+          <span class="hint">0 for no break</span>
+          <span class="hint-err" data-err="b" hidden>0 to 90</span></div>
+      </div></div>
+      <div class="modal-foot"><span class="spring"></span>
+        <button class="btn" id="cp-cancel">Cancel</button>
+        <button class="btn" id="cp-save">Save as preset</button>
+        <button class="btn btn-primary" id="cp-start">Start</button></div>`);
+
+    const fEl = $('#cp-f', modal), bEl = $('#cp-b', modal);
+    // returns {focusMin, breakMin} or null, flagging whichever field is out of range
+    function read() {
+      $$('.hint-err', modal).forEach(e => { e.hidden = true; });
+      $$('.in.err', modal).forEach(e => e.classList.remove('err'));
+      const f = Math.round(Number(fEl.value)), b = Math.round(Number(bEl.value));
+      const bad = (el, key) => {
+        $(`[data-err="${key}"]`, modal).hidden = false;
+        el.classList.add('err'); el.focus();
+        return null;
+      };
+      if (!Number.isFinite(f) || f < 1 || f > 180) return bad(fEl, 'f');
+      if (!Number.isFinite(b) || b < 0 || b > 90) return bad(bEl, 'b');
+      return { focusMin: f, breakMin: b };
+    }
+
+    const start = () => {
+      const v = read();
+      if (!v) return;
+      close();
+      bloom.focusStart(v).then(focusLiveHandler);
+    };
+    $('#cp-cancel', modal).addEventListener('click', close);
+    $('#cp-start', modal).addEventListener('click', start);
+    [fEl, bEl].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); start(); } }));
+
+    $('#cp-save', modal).addEventListener('click', async () => {
+      const v = read();
+      if (!v) return;
+      const home = findNode(focusHomeId()) || cfg.root;
+      home.children = home.children || [];
+      const same = home.children.find(n => n.type === 'focus' && (n.params || {}).cmd === 'start'
+        && n.params.focusMin === v.focusMin && n.params.breakMin === v.breakMin);
+      if (same) { close(); toast(`You already have a ${v.focusMin} / ${v.breakMin} preset`); return; }
+      if (!capOk(home)) { close(); return; }              // rings hard-cap at 12 items
+      close();
+      home.children.push({
+        id: slugId(`focus ${v.focusMin} ${v.breakMin}`), type: 'focus',
+        label: `${v.focusMin} / ${v.breakMin}`, icon: 'timer', enabled: true,
+        params: { cmd: 'start', focusMin: v.focusMin, breakMin: v.breakMin }
+      });
+      await saveTree();
+      flSig = '';
+      bloom.focusGet().then(focusLiveHandler);      // the new chip shows on the idle card
+      toast(`Added the ${v.focusMin} / ${v.breakMin} preset — it's in your Focus folder`, { kind: 'ok' });
+    });
+  }
+
+  // ---- eisenhower matrix ----
+  // Drag works, but it is invisible until you try it — so every card also carries an
+  // explicit move button, and the quadrant tells you what to do when it is empty.
+  function renderMatrix(pane) {
+    const box = $('.matrix', pane);
+    const all = tasks();
+    box.innerHTML = QUADRANTS.map(qd => {
+      const items = all.filter(t => t.q === qd.q);
+      const open = items.filter(t => !t.done).length;
+      return `
+        <section class="quad" data-q="${qd.q}" style="--q:${qd.color}">
+          <header class="quad-head">
+            <span class="quad-dot"></span>
+            <div><div class="quad-title">${qd.title}</div><div class="quad-sub">${qd.sub}</div></div>
+            <span class="quad-count">${items.length ? `${open} open` : ''}</span>
+          </header>
+          <div class="quad-body">
+            ${items.map(t => taskCardHTML(t)).join('')
+              || `<p class="quad-empty">Nothing here yet.<br><span>Type below to add your first one.</span></p>`}
+          </div>
+          <div class="quad-add">
+            <input class="qin" type="text" placeholder="Add to ${qd.title.toLowerCase()}…" maxlength="140" aria-label="Add to ${qd.title}">
+            <button class="btn btn-sm qadd" data-add="${qd.q}">${icon('plus', 12)} Add</button>
+          </div>
+        </section>`;
+    }).join('');
+    wireMatrix(box);
+  }
+
+  function taskCardHTML(t) {
+    return `
+      <article class="tcard ${t.done ? 'done' : ''}" draggable="true" data-id="${esc(t.id)}">
+        <button class="tcheck" data-a="done" title="${t.done ? 'Mark as not done' : 'Mark done'}" aria-label="Toggle done">${t.done ? icon('check', 12) : ''}</button>
+        <span class="ttext" data-a="edit" title="Click to rename">${esc(t.text)}</span>
+        <span class="tacts">
+          <button class="ticon" data-a="focus" title="Start a focus block on this — pick how long" aria-label="Focus on this">${icon('timer', 13)}</button>
+          <button class="ticon" data-a="move" title="Move to another quadrant" aria-label="Move">${icon('shuffle', 13)}</button>
+          <button class="ticon danger" data-a="del" title="Delete" aria-label="Delete">${icon('trash', 13)}</button>
+        </span>
+      </article>`;
+  }
+
+  function wireMatrix(box) {
+    const rerender = () => renderMatrix($('#tab-focus'));
+
+    const addFrom = async inp => {
+      const text = inp.value.trim();
+      if (!text) { inp.focus(); return; }
+      inp.value = '';
+      const q = inp.closest('.quad').dataset.q;
+      await saveTasks([...tasks(), { id: slugId(text), text, q, done: false, created: Date.now() }]);
+      rerender();
+      $(`.quad[data-q="${q}"] .qin`, $('#tab-focus')).focus();   // keep typing in the same quadrant
+    };
+    $$('.qin', box).forEach(inp => {
+      inp.addEventListener('focus', () => { midEdit = true; });
+      inp.addEventListener('blur', () => { midEdit = false; });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addFrom(inp); } });
+    });
+    $$('[data-add]', box).forEach(b => b.addEventListener('click', () =>
+      addFrom($(`.quad[data-q="${b.dataset.add}"] .qin`, box))));
+
+    $$('.tcard', box).forEach(card => {
+      const id = card.dataset.id;
+      card.querySelectorAll('[data-a]').forEach(el => el.addEventListener('click', async ev => {
+        const list = tasks();
+        const t = list.find(x => x.id === id);
+        if (!t) return;
+        const a = el.dataset.a;
+        if (a === 'done') { t.done = !t.done; await saveTasks(list); rerender(); }
+        else if (a === 'del') {
+          await saveTasks(list.filter(x => x.id !== id));
+          rerender();
+          toast(`Deleted "${t.text}"`, { undo: async () => { await saveTasks([...tasks(), t]); rerender(); } });
+        } else if (a === 'focus') { ev.stopPropagation(); openTaskTimerMenu(el, t); }
+        else if (a === 'move') { ev.stopPropagation(); openMoveMenu(el, t, rerender); }
+        else if (a === 'edit') inlineEditTask(el, t);
+      }));
+
+      card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', id);
+        e.dataTransfer.effectAllowed = 'move';
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        $$('.quad.over', box).forEach(q => q.classList.remove('over'));
+      });
+    });
+
+    $$('.quad', box).forEach(quad => {
+      quad.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; quad.classList.add('over'); });
+      quad.addEventListener('dragleave', e => { if (!quad.contains(e.relatedTarget)) quad.classList.remove('over'); });
+      quad.addEventListener('drop', async e => {
+        e.preventDefault();
+        quad.classList.remove('over');
+        const id = e.dataTransfer.getData('text/plain');
+        const list = tasks();
+        const t = list.find(x => x.id === id);
+        if (!t || t.q === quad.dataset.q) return;
+        t.q = quad.dataset.q;
+        await saveTasks(list);
+        rerender();
+        toast(`Moved to ${QMAP[t.q].title}`);
+      });
+    });
+  }
+
+  // Card popovers live on <body> and are positioned to the viewport: a quadrant is a
+  // scroll box, so anything absolutely placed inside a card gets clipped by it.
+  function openCardMenu(anchor, html) {
+    $$('.move-menu').forEach(m => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'move-menu';
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
+    const a = anchor.getBoundingClientRect();
+    const m = menu.getBoundingClientRect();
+    const pad = 8;
+    // below-right of the button, flipped up or nudged in when it would run off-screen
+    let top = a.bottom + 6;
+    if (top + m.height > innerHeight - pad) top = Math.max(pad, a.top - m.height - 6);
+    let left = a.right - m.width;
+    left = Math.min(Math.max(pad, left), innerWidth - m.width - pad);
+    menu.style.top = Math.round(top) + 'px';
+    menu.style.left = Math.round(left) + 'px';
+    const close = () => { menu.remove(); document.removeEventListener('mousedown', away); window.removeEventListener('keydown', onKey); };
+    const away = ev => { if (!menu.contains(ev.target)) close(); };
+    const onKey = ev => { if (ev.key === 'Escape') close(); };
+    setTimeout(() => { document.addEventListener('mousedown', away); window.addEventListener('keydown', onKey); }, 0);
+    return { menu, close };
+  }
+
+  function openMoveMenu(anchor, task, done) {
+    const { menu, close } = openCardMenu(anchor, QUADRANTS.filter(q => q.q !== task.q).map(q =>
+      `<button data-q="${q.q}"><i style="background:${q.color}"></i>${esc(q.title)}</button>`).join(''));
+    $$('button', menu).forEach(b => b.addEventListener('click', async () => {
+      const list = tasks();
+      const t = list.find(x => x.id === task.id);
+      close();
+      if (!t) return;
+      t.q = b.dataset.q;
+      await saveTasks(list);
+      done();
+      toast(`Moved to ${QMAP[t.q].title}`);
+    }));
+  }
+
+  // ⏱ on a card: pick the length here rather than silently reusing the last one.
+  // Custom minutes are typed inline — no modal, no trip back to the Timer card.
+  function openTaskTimerMenu(anchor, task) {
+    const last = (cfg.focus && cfg.focus.lastPreset) || { focusMin: 25, breakMin: 5 };
+    const presets = startPresets();
+    const { menu, close } = openCardMenu(anchor,
+      `<div class="mm-head">Focus on this for</div>` +
+      (presets.length
+        ? presets.map(n => `<button data-f="${n.params.focusMin}" data-b="${n.params.breakMin}">${icon('timer', 13)} ${esc(n.params.focusMin)} / ${esc(n.params.breakMin)} min</button>`).join('')
+        : `<button data-f="${last.focusMin}" data-b="${last.breakMin}">${icon('timer', 13)} ${last.focusMin} / ${last.breakMin} min</button>`) +
+      `<div class="mm-custom">
+         <input type="number" min="1" max="180" value="${last.focusMin}" aria-label="Focus minutes">
+         <span>/</span>
+         <input type="number" min="0" max="90" value="${last.breakMin}" aria-label="Break minutes">
+         <button data-custom>Start</button>
+       </div>`);
+
+    const start = (focusMin, breakMin) => {
+      close();
+      bloom.focusStart({ focusMin, breakMin, taskId: task.id }).then(sn => { if (focusLiveHandler) focusLiveHandler(sn); });
+      toast(`Focusing on “${task.text}” for ${focusMin} min`, { kind: 'ok' });
+    };
+    $$('[data-f]', menu).forEach(b => b.addEventListener('click', () => start(+b.dataset.f, +b.dataset.b)));
+    const [fEl, bEl] = $$('.mm-custom input', menu);
+    const startCustom = () => {
+      const f = Math.round(Number(fEl.value)), b = Math.round(Number(bEl.value));
+      if (!Number.isFinite(f) || f < 1 || f > 180) { fEl.focus(); fEl.select(); return; }
+      if (!Number.isFinite(b) || b < 0 || b > 90) { bEl.focus(); bEl.select(); return; }
+      start(f, b);
+    };
+    $('[data-custom]', menu).addEventListener('click', startCustom);
+    [fEl, bEl].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); startCustom(); } }));
+  }
+
+  function inlineEditTask(span, task) {
+    const input = document.createElement('input');
+    input.className = 'qin ttext-edit';
+    input.value = task.text;
+    input.maxLength = 140;
+    span.replaceWith(input);
+    midEdit = true;
+    input.focus(); input.select();
+    let settled = false;
+    const commit = async save => {
+      if (settled) return; settled = true;
+      midEdit = false;
+      const text = input.value.trim();
+      if (save && text && text !== task.text) {
+        const list = tasks();
+        const t = list.find(x => x.id === task.id);
+        if (t) { t.text = text; await saveTasks(list); }
+      }
+      renderMatrix($('#tab-focus'));
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+    });
+    input.addEventListener('blur', () => commit(true));
+  }
+
   // ==== PROFILES TAB ====
+  // Deliberately excludes `appearance`: the accent is one global setting shared by every
+  // profile, so changing it in one changes it everywhere and switching never repaints.
   function snapshotProfile() {
-    return deepClone({ root: cfg.root, favoriteId: cfg.favoriteId, holdFavoriteId: cfg.holdFavoriteId, pinnedIds: cfg.pinnedIds, appearance: cfg.appearance });
+    return deepClone({ root: cfg.root, pinnedIds: cfg.pinnedIds });
   }
   function savedProfiles() {
     const out = {};
@@ -1984,7 +2497,7 @@
     const names = Array.from(new Set([active, ...Object.keys(saved)]));
     pane.innerHTML = `
       <h1>Profiles</h1>
-      <p class="tab-desc">A profile bundles your action tree, favorites and look.</p>
+      <p class="tab-desc">A profile bundles your action tree and pinned actions. Your accent stays global — change it once in Appearance and every profile follows.</p>
       <div class="card" data-sid="profiles-list" data-search="profiles switch">
         ${names.map(name => `
           <div class="profile-row" data-name="${esc(name)}">
@@ -1992,13 +2505,42 @@
             <span class="profile-name">${esc(name)}</span>
             ${name === active ? `<span class="chip-active">active</span>` : ''}
             <span class="tr-spring" style="flex:1"></span>
-            ${name !== active ? `<button class="btn btn-sm" data-p="switch">Switch</button>` : ''}
-            <button class="btn btn-sm" data-p="rename">Rename</button>
-            <button class="btn btn-sm" data-p="dup">Duplicate</button>
-            ${name !== active ? `<button class="btn btn-sm btn-danger" data-p="del">Delete</button>` : ''}
+            <span class="profile-acts">
+              ${name !== active ? `<button class="icon-btn" data-p="switch" title="Switch to this profile" aria-label="Switch to ${esc(name)}">${icon('repeat', 15)}</button>` : ''}
+              <button class="icon-btn" data-p="rename" title="Rename" aria-label="Rename ${esc(name)}">${icon('pencil', 15)}</button>
+              <button class="icon-btn" data-p="dup" title="Duplicate" aria-label="Duplicate ${esc(name)}">${icon('clipboard', 15)}</button>
+              ${name !== active ? `<button class="icon-btn danger" data-p="del" title="Delete" aria-label="Delete ${esc(name)}">${icon('trash', 15)}</button>` : ''}
+            </span>
           </div>`).join('')}
       </div>
-      <button class="btn btn-primary" id="profile-new" style="margin-top:12px">${icon('plus', 14)} New profile</button>`;
+      <button class="btn btn-primary" id="profile-new" style="margin-top:12px">${icon('plus', 14)} New profile</button>
+
+      <h2 class="sec">Starter templates</h2>
+      <p class="tab-desc" style="margin-bottom:14px">The setups the welcome question chooses between. Applying one replaces your tree and pins — your current setup is saved under "${esc(active)}" first.</p>
+      <div class="tpl-grid" data-sid="templates" data-search="template starter default maker coordinator explorer"></div>`;
+
+    bloom.getTemplates().then(list => {
+      const grid = $('.tpl-grid', pane);
+      if (!grid) return;
+      grid.innerHTML = list.map(t => `
+        <button class="tpl-card ${t.label === active ? 'sel' : ''}" data-key="${esc(t.key)}">
+          <span class="tpl-ic">${icon(t.icon, 20)}</span>
+          <span class="tpl-name">${esc(t.label)}${t.label === active ? ' <span class="chip-active">active</span>' : ''}</span>
+          <span class="tpl-blurb">${esc(t.blurb)}</span>
+          <span class="tpl-for">${esc(t.for)}</span>
+        </button>`).join('');
+      $$('.tpl-card', grid).forEach(card => card.addEventListener('click', async () => {
+        const t = list.find(x => x.key === card.dataset.key);
+        const ok = await confirmModal('Apply template',
+          `Replace your actions and pins with the "${t.label}" setup? Your current setup is kept as the "${active}" profile.`, 'Apply');
+        if (!ok) return;
+        // Snapshot what's live under its own name first, or switching back loses it.
+        await patch({ profiles: { saved: { [active]: snapshotProfile() } } });
+        cfg = await bloom.applyTemplate({ key: t.key });
+        renderTab('profiles');
+        toast(`Switched to "${t.label}"`, { kind: 'ok' });
+      }));
+    }).catch(() => {});
 
     $('#profile-new', pane).addEventListener('click', () => promptName('New profile', 'Profile name', '', async name => {
       if (!name || names.includes(name)) { toast(name ? 'That name is taken.' : 'Name required.', { kind: 'bad' }); return; }
@@ -2019,8 +2561,7 @@
           // one atomic patch: save current under old name, activate target, hoist its data
           await patch({
             profiles: { active: name, saved: newSaved },
-            root: target.root, favoriteId: target.favoriteId ?? null, holdFavoriteId: target.holdFavoriteId ?? null,
-            pinnedIds: target.pinnedIds || [], appearance: target.appearance
+            root: target.root, pinnedIds: target.pinnedIds || []
           });
           renderTab('profiles');
           toast(`Switched to "${name}"`, { kind: 'ok' });
@@ -2134,15 +2675,42 @@
   }
 
   // ==== ABOUT TAB ====
+  // electron-updater hands release notes over as markdown, HTML, or an array of
+  // {version, note} depending on the provider. Flatten all three to plain lines and
+  // re-render them ourselves, so nothing from a release body ever reaches innerHTML.
+  function notesToLines(raw) {
+    if (!raw) return [];
+    const chunks = Array.isArray(raw)
+      ? raw.map(n => (typeof n === 'string' ? n : `## ${n.version || ''}\n${n.note || ''}`))
+      : [String(raw)];
+    return chunks.join('\n')
+      .replace(/<!--[\s\S]*?-->/g, '')   // drop HTML comments (e.g. instruction headers)
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')   // drop the contents, not just the tags
+      .replace(/<li[^>]*>/gi, '\n- ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|h\d|ul|ol|li|tr|blockquote)>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"').replace(/&#0?39;|&apos;/gi, "'")
+      .replace(/&amp;/gi, '&')
+      .split('\n').map(l => l.trim()).filter(Boolean)
+      .slice(0, 200);
+  }
+  // Escape first, then re-add only bold and code — the only markup we render.
+  const inline = t => esc(t)
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+
   function renderAbout(pane) {
     const u = cfg.updates || {};
     pane.innerHTML = `
       <div class="card about-card" data-sid="about-card" data-search="about version updates">
         <span class="about-glyph">${BloomIcons.logo(72, { strokeWidth: 2.4 })}</span>
         <div class="about-name">Bloom</div>
-        <div class="about-tag">Your desktop, one bloom away.</div>
         <div class="about-meta">Version <span id="ab-version">…</span></div>
         <div class="about-actions">
+          <button class="btn" id="ab-tour">${icon('wand', 14)} Take the tour</button>
           <button class="btn" id="ab-onboard">${icon('sparkle', 14)} Replay onboarding</button>
           <button class="btn" id="ab-cheat">${icon('keyboard', 14)} View shortcut cheat-sheet</button>
         </div>
@@ -2168,9 +2736,20 @@
             <option value="beta" ${u.channel === 'beta' ? 'selected' : ''}>Beta</option>
           </select></div>
         </div>
+        <div class="ctl-row rel-row" id="up-notes-row" hidden data-search="release notes changelog what is new fixed added">
+          <details class="rel-notes" id="rel-details" open>
+            <summary class="rel-head">
+              ${icon('chevron-down', 13)}
+              <span id="rel-title">What's new</span>
+              <span class="rel-date" id="rel-date"></span>
+            </summary>
+            <div class="rel-body" id="rel-body"></div>
+          </details>
+        </div>
       </div>`;
     const setVer = v => { const el = $('#ab-version', pane); if (el) el.textContent = v; };
     bloom.getVersion().then(setVer).catch(() => setVer('dev'));
+    $('#ab-tour', pane).addEventListener('click', startTour);
     $('#ab-onboard', pane).addEventListener('click', () => { bloom.relaunchOnboarding(); toast('Onboarding will replay', { kind: 'ok' }); });
     $('#ab-cheat', pane).addEventListener('click', () => {
       switchTab('hotkeys');
@@ -2200,18 +2779,150 @@
     $('#up-auto', pane).addEventListener('change', e => patch({ updates: { autoCheck: e.target.checked } }));
     $('#up-channel', pane).addEventListener('change', e => patch({ updates: { channel: e.target.value } }));
 
+    const notesRow = $('#up-notes-row', pane), notesBody = $('#rel-body', pane);
+    let lastNotes = null, notesFor = '';
+    function showNotes(version, raw, date, kind) {
+      const lines = notesToLines(raw);
+      $('#rel-title', pane).textContent =
+        kind === 'installed' ? `What's in ${version} — the version you're running`
+        : version ? `What's new in ${version}` : "What's new";
+      $('#rel-details', pane).classList.toggle('is-installed', kind === 'installed');
+      const d = date ? new Date(date) : null;
+      $('#rel-date', pane).textContent = d && !isNaN(d) ? d.toLocaleDateString() : '';
+      notesBody.innerHTML = lines.length
+        ? lines.map(l => {
+          const h = /^#{1,6}\s+(.*)$/.exec(l);
+          if (h) return `<div class="rl-h">${inline(h[1])}</div>`;
+          const b = /^[-*+]\s+(.*)$/.exec(l);
+          if (b) return `<div class="rl-li"><i></i><span>${inline(b[1])}</span></div>`;
+          return `<div class="rl-p">${inline(l)}</div>`;
+        }).join('')
+        : `<div class="rl-p muted">No release notes were published for this version — the full changelog is on the GitHub releases page.</div>`;
+      notesRow.hidden = false;
+    }
+
+    let installedShown = false;
+    async function showInstalledNotes() {
+      if (installedShown) return;
+      installedShown = true;
+      let ver = 'dev';
+      try { ver = await bloom.getVersion(); } catch { /* keep the placeholder */ }
+      const r = await bloom.releaseNotes(ver).catch(() => null);
+      if (!$('#up-notes-row')) return;                 // tab navigated away mid-fetch
+      if (!r) { installedShown = false; return; }      // offline or no such release — say nothing
+      notesFor = ''; lastNotes = r.notes;
+      showNotes(r.version || ver, r.notes, r.date, 'installed');
+    }
+
     aboutUpdateHandler = (s) => {
       if (!$('#up-btn')) return;                    // tab navigated away
       const info = s.info || {};
+      if (s.event === 'available' || s.event === 'downloaded') {
+        const v = info.version || newVersion || '';
+        if (v !== notesFor) { notesFor = v; lastNotes = null; }   // never show one version's notes for another
+        if (info.notes) lastNotes = info.notes;     // 'downloaded' doesn't always repeat them
+        showNotes(v, lastNotes, info.date, 'update');
+      } else if (s.event === 'none') {
+        // Up to date is not the same as nothing to say — show what the installed build brought.
+        lastNotes = null; notesFor = ''; notesRow.hidden = true;
+        showInstalledNotes();
+      } else if (s.event === 'error') { lastNotes = null; notesFor = ''; notesRow.hidden = true; }
       if (s.event === 'checking') { mode = 'checking'; statusEl.textContent = 'Checking for updates…'; }
       else if (s.event === 'available') { mode = 'available'; newVersion = info.version || ''; statusEl.textContent = `Version ${newVersion} is available.`; }
-      else if (s.event === 'none') { mode = 'idle'; statusEl.textContent = 'Bloom is up to date.'; }
+      else if (s.event === 'none') { mode = 'idle'; statusEl.textContent = "You're on the latest version."; }
       else if (s.event === 'progress') { mode = 'downloading'; bar.style.width = (info.percent || 0).toFixed(0) + '%'; statusEl.textContent = `Downloading… ${(info.percent || 0).toFixed(0)}%`; }
       else if (s.event === 'downloaded') { mode = 'ready'; statusEl.textContent = `Version ${info.version || newVersion} ready to install.`; }
       else if (s.event === 'error') { mode = 'idle'; statusEl.textContent = info.message || 'Update check failed.'; }
       paint();
     };
-    paint();
+    if (lastUpdateStatus) aboutUpdateHandler(lastUpdateStatus); else paint();
+  }
+
+  // ==== GUIDED TOUR ====
+  // Coach marks over the real chrome: each step switches to the tab it's describing,
+  // so the panel behind the spotlight is the thing being talked about.
+  const TOUR = [
+    { sel: '#rail [data-tab="actions"]', tab: 'actions', icon: 'grid', h: 'Everything in your dial lives here',
+      p: 'This list <b>is</b> the ring. Add actions, drag to reorder, and drop one onto another to make a folder.' },
+    { sel: '#rail [data-tab="appearance"]', tab: 'appearance', icon: 'eye', h: 'Shape and colour',
+      p: 'Node size, ring radius, spacing and your accent — the preview on the right updates as you drag.' },
+    { sel: '#rail [data-tab="hotkeys"]', tab: 'hotkeys', icon: 'keyboard', h: 'Keys and gestures',
+      p: 'Rebind the global hotkeys and give a single action its own shortcut. <b>Double-tap the bud</b> to dictate, <b>hold it</b> to read your selection aloud.' },
+    { sel: '#rail [data-tab="focus"]', tab: 'focus', icon: 'target', h: 'Focus timer and task matrix',
+      p: 'Start a pomodoro and it draws itself as a ring around the bud — <b>hover the bud</b> for the time left. Below it, sort what matters into the four quadrants.' },
+    { sel: '#rail [data-tab="profiles"]', tab: 'profiles', icon: 'clipboard', h: 'Whole setups, swapped in one click',
+      p: 'A profile bundles your actions and pins. Keep one for work and one for everything else, or start again from a template.' },
+    { sel: '#rail [data-tab="about"]', tab: 'about', icon: 'bloom', h: 'Updates, with the changelog',
+      p: 'Check for a new version here — when one exists, what changed in it is listed right under the button.' },
+    { sel: '#global-search-wrap', tab: null, icon: 'search', h: 'And when you forget where something is',
+      p: 'Search every setting and every action from here. That is the whole tour — the bud is waiting for you.' }
+  ];
+
+  function startTour() {
+    const root = $('#tour-root');
+    if (!root || root.firstChild) return;
+    let i = 0;
+    root.innerHTML = `<div class="tour-spot"></div><div class="tour-pop"></div>`;
+    const spot = $('.tour-spot', root), pop = $('.tour-pop', root);
+
+    function paintStep() {
+      const s = TOUR[i];
+      const last = i === TOUR.length - 1;   // final step ends Back · Close, Close highlighted
+      if (s.tab) switchTab(s.tab, { noFocus: true });
+      pop.innerHTML = `
+        <h3>${icon(s.icon, 15)}${esc(s.h)}</h3>
+        <p>${s.p}</p>
+        <div class="tour-foot">
+          <span class="tour-step">${i + 1} / ${TOUR.length}</span>
+          <span class="spring"></span>
+          ${last ? '' : '<button class="btn btn-sm" data-t="skip">Skip</button>'}
+          ${i ? '<button class="btn btn-sm" data-t="back">Back</button>' : ''}
+          ${last
+            ? '<button class="btn btn-sm btn-primary" data-t="skip">Close</button>'
+            : '<button class="btn btn-sm btn-primary" data-t="next">Next</button>'}
+        </div>`;
+      $$('[data-t]', pop).forEach(b => b.addEventListener('click', () => {
+        const a = b.dataset.t;
+        if (a === 'next') go(1); else if (a === 'back') go(-1); else end();
+      }));
+      place();
+    }
+
+    function place() {
+      const el = $(TOUR[i].sel);
+      if (!el) return;
+      const r = el.getBoundingClientRect(), pad = 6;
+      spot.style.left = (r.left - pad) + 'px';
+      spot.style.top = (r.top - pad) + 'px';
+      spot.style.width = (r.width + pad * 2) + 'px';
+      spot.style.height = (r.height + pad * 2) + 'px';
+      const ph = pop.offsetHeight || 170;
+      let left = r.right + 16, top = r.top - 8;
+      if (left + 300 > innerWidth - 12) { left = Math.max(12, Math.min(r.left, innerWidth - 312)); top = r.bottom + 14; }
+      pop.style.left = Math.round(left) + 'px';
+      pop.style.top = Math.round(Math.min(Math.max(12, top), innerHeight - ph - 12)) + 'px';
+    }
+
+    function go(d) {
+      const n = i + d;
+      if (n < 0) return;
+      if (n >= TOUR.length) { end(); return; }
+      i = n; paintStep();
+    }
+    function end() {
+      root.innerHTML = '';
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', place);
+      if (!cfg.seenTour) patch({ seenTour: true });
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.stopPropagation(); end(); }
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); go(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    }
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('resize', place);
+    paintStep();
   }
 
   // ---- boot ----
@@ -2233,7 +2944,17 @@
       rerenderCurrent();
     });
     bloom.on('settings-tab', t => switchTab(t));
+    bloom.on('hotkey-status', f => { hotkeyFailures = f || {}; paintHotkeyFailures(); });
+    bloom.on('settings-cmd', c => {
+      if (c === 'new-preset') { switchTab('focus'); customPresetModal(); }
+      else if (c === 'tasks') { switchTab('focus'); const el = $('[data-sid="matrix"]'); if (el) flashControl(el); }
+    });
+    bloom.on('focus-status', s => {
+      lastFocus = s;
+      if (currentTab === 'focus' && focusLiveHandler && $('#focus-live')) focusLiveHandler(s);
+    });
     bloom.on('update-status', s => {
+      lastUpdateStatus = s;
       if (aboutUpdateHandler) aboutUpdateHandler(s);
       if (s.event === 'available') toast(`Bloom ${s.info?.version || ''} available — see About & Updates`, { kind: 'ok' });
       else if (s.event === 'downloaded') toast('Update ready — restart to install (About)', { kind: 'ok' });
@@ -2241,6 +2962,16 @@
 
     const saved = localStorage.getItem('bloom-settings-tab');
     switchTab(TABS.includes(saved) ? saved : 'actions');
+
+    // First time this window is opened after onboarding, walk them through it once.
+    if (!cfg.seenTour && cfg.seenOnboarding) setTimeout(startTour, 500);
+
+    // hooks for the CDP test harness (same shape as window.__bloom / window.__bud)
+    window.__settings = {
+      switchTab, startTour, notesToLines,
+      updateStatus: s => { lastUpdateStatus = s; if (aboutUpdateHandler) aboutUpdateHandler(s); },
+      cfg: () => cfg
+    };
   }
   window.addEventListener('DOMContentLoaded', boot);
 })();
