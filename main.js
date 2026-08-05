@@ -1353,9 +1353,21 @@ function wireIPC() {
         });
         if (!res.ok) continue;
         const j = await res.json();
-        return { version: (j.tag_name || v).replace(/^v/, ''), notes: j.body || '', date: j.published_at || null };
+        if (j && j.body && j.body.trim()) {
+          return { version: (j.tag_name || v).replace(/^v/, ''), notes: j.body, date: j.published_at || null };
+        }
       } catch { /* offline or rate-limited — fall through */ }
     }
+    // Fallback to local RELEASE_NOTES.md if GitHub API body is empty, offline, or rate-limited
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const localPath = path.join(__dirname, 'RELEASE_NOTES.md');
+      if (fs.existsSync(localPath)) {
+        const notes = fs.readFileSync(localPath, 'utf8');
+        return { version: v, notes, date: null };
+      }
+    } catch { /* ignore */ }
     return null;
   });
 

@@ -1,7 +1,7 @@
 {
   "name": "bloom",
   "productName": "Bloom",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Everything, one bloom away. A floating, layered, glass quick-action launcher.",
   "author": "Bloom",
   "main": "main.js",
