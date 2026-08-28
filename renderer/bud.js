@@ -86,8 +86,62 @@
     tipOn = on;
     cmd('focus-hover', { on });
   };
-  document.body.addEventListener('mouseenter', () => setTip(true));
-  document.body.addEventListener('mouseleave', () => setTip(false));
+  // ---- notification peek ----
+  // The bud pulses while something is unread. Notifications are only *shown* once
+  // the cursor has genuinely settled here, and they are only marked seen once that
+  // peek ends — so grabbing the bud to drag it, or tapping it open, costs nothing.
+  let notif = { count: 0, peeking: false };
+  let dwellTimer = null;
+  let cursorIn = false;
+
+  const dwellMs = () => {
+    const v = Number(cfg.notifications?.dwellMs);
+    return Number.isFinite(v) ? Math.max(150, Math.min(4000, v)) : 1000;
+  };
+
+  // The halo alone carries the news. A count would say something the glance and the
+  // peek already say better, and at 44px it only crowds the bud.
+  function paintNotif() {
+    budEl.classList.toggle('has-notif', notif.count > 0 && !notif.peeking);
+    budEl.classList.toggle('peeking', !!notif.peeking);
+  }
+
+  function armDwell() {
+    clearTimeout(dwellTimer);
+    dwellTimer = null;
+    // Nothing waiting, the dial owns the screen, or a finger is on the bud: no peek.
+    if (!cursorIn || !notif.count || notif.peeking || ringOpen || drag) return;
+    dwellTimer = setTimeout(() => {
+      dwellTimer = null;
+      if (cursorIn && !drag && !ringOpen) cmd('notif-peek', { on: true });
+    }, dwellMs());
+  }
+
+  function cancelDwell() {
+    clearTimeout(dwellTimer);
+    dwellTimer = null;
+  }
+
+  budEl.addEventListener('mouseenter', () => {
+    cursorIn = true;
+    armDwell();
+    setTip(true);
+  });
+  budEl.addEventListener('mouseleave', () => {
+    cursorIn = false;
+    cancelDwell();
+    cmd('notif-peek', { on: false });
+    setTip(false);
+  });
+
+  window.bloom.on('notif-state', s => {
+    const wasPeeking = notif.peeking;
+    notif = { count: s.count | 0, peeking: !!s.peeking };
+    paintNotif();
+    // A fresh notification while the cursor already rests here should surface on its
+    // own dwell rather than waiting for the pointer to leave and come back.
+    if (!notif.peeking && (wasPeeking || notif.count)) armDwell();
+  });
 
   // tray icon: the Bloom mark, white lines on a dark disc
   function makeTrayIcon() {
@@ -122,6 +176,10 @@
     const centerX = window.screenX + innerWidth / 2;
     const centerY = window.screenY + innerHeight / 2;
     drag = { offX: e.screenX - centerX, offY: e.screenY - centerY, sx: e.screenX, sy: e.screenY, moved: false };
+    // Touching the bud is an intent to move or open it, never an intent to read.
+    // Close any open peek but keep the notifications — and the pulse — untouched.
+    cancelDwell();
+    if (notif.peeking) cmd('notif-peek', { on: false, keep: true });
     clearTimeout(longTimer);
     clearTimeout(clickTimer);
     if (!ringOpen) {
@@ -156,6 +214,7 @@
       document.body.classList.remove('dragging');
       budEl.classList.remove('dragging');
       if (!d.blocked) cmd('drag-end', { cx: e.screenX - d.offX, cy: e.screenY - d.offY });
+      armDwell();   // the dwell clock restarts from where the bud came to rest
       return; // blocked (pinned) drag ends silently
     }
     if (suppressClick) { suppressClick = false; return; }
@@ -224,7 +283,8 @@
   window.bloom.on('ui-flags', f => {
     ringOpen = !!f.ringOpen;
     document.body.classList.toggle('open', ringOpen);
-    if (ringOpen) setTip(false);      // the dial owns the bud's surroundings while it's open
+    if (ringOpen) { setTip(false); cancelDwell(); }   // the dial owns the bud's surroundings while it's open
+    else armDwell();
   });
   // Voice state drives the orb morph: listening pulse, transcribing spinner, speaking glow.
   window.bloom.on('voice-ui', v => {
@@ -239,6 +299,7 @@
   // boot
   applyAppearance();
   layoutRing();
+  paintNotif();
   budEl.classList.add('breathe');
   makeTrayIcon();
   window.bloom.focusGet().then(onFocus).catch(() => {});

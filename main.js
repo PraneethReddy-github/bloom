@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const cp = require('child_process');
 const store = require('./config');
+const { Garden, AVATARS } = require('./garden');
 
 const IS_WIN = process.platform === 'win32';
 const IS_LINUX = process.platform === 'linux';
@@ -209,7 +210,14 @@ function applyOverlayState() {
     ensureOverlayBounds();
     broadcastBudPos();
     if (!overlay.isVisible()) overlay.showInactive();
-    overlay.setIgnoreMouseEvents(true);
+    // A peek has to take real clicks — Accept/Decline live on the cards. The
+    // `forward` option is Windows/macOS only, so on Linux a click-through overlay
+    // receives no pointer events at all and the cards would be inert decoration.
+    // Interactivity is therefore scoped tightly to the peek: the user has already
+    // held the cursor on the bud to ask for it, and the overlay drops back to
+    // click-through the moment the pointer leaves the cards.
+    if (peeking && notifs.length) overlay.setIgnoreMouseEvents(false);
+    else overlay.setIgnoreMouseEvents(true, { forward: true });
     budWin?.moveTop();
   } else {
     // Idle: stay mapped, go click-through, hand focus back to the user.
@@ -425,7 +433,11 @@ async function sendChord(key) {
     case 'powershell': return run(`powershell -c "$w=New-Object -ComObject WScript.Shell; $w.SendKeys('^${key}')"`);
     case 'osascript': return run(`osascript -e 'tell application "System Events" to keystroke "${key}" using command down'`);
     case 'xdotool': return run(`xdotool key --clearmodifiers ctrl+${key}`);
-    case 'wtype': return run(`wtype -M ctrl -k ${key} -m ctrl`);
+    case 'wtype': {
+      const res = await run(`wtype -M ctrl -k ${key} -m ctrl`);
+      if (!res.ok && hasBin('xdotool')) return run(`xdotool key --clearmodifiers ctrl+${key}`);
+      return res;
+    }
     case 'ydotool': { const c = key === 'v' ? 47 : 46; return run(`ydotool key 29:1 ${c}:1 ${c}:0 29:0`); }
     default: return { ok: false, error: MISSING_TOOL_MSG };
   }
@@ -1085,15 +1097,243 @@ function getAutostart() {
   return fs.existsSync(AUTOSTART_FILE);
 }
 
+// ---- garden ----
+// The LAN layer lives in garden.js; main only owns the wiring: persistence, the
+// notification queue, and which window hears about what.
+const garden = new Garden();
+
+function gardenPersist(patchObj) {
+  gardenPersistInto(cfg, patchObj);
+  store.save(cfg);
+}
+
+// Merge cfg.garden rather than replacing it: garden owns id/name/public in there,
+// but the object also carries preferences it knows nothing about.
+function gardenPersistInto(target, patchObj) {
+  const { garden: g, ...rest } = patchObj;
+  Object.assign(target, rest);
+  target.garden = { ...(target.garden || {}), ...g };
+}
+
+// Garden owns these keys. A renderer patch that carried them would race the live
+// conversation state and silently drop messages that landed mid-edit.
+const GARDEN_KEYS = ['garden', 'gardenSchema', 'gardenPeople', 'gardenChats', 'gardenUnread', 'gardenInbox', 'gardenOutbox'];
+function stripGardenKeys(partial) {
+  if (!partial || typeof partial !== 'object') return partial;
+  let copy = null;
+  for (const k of GARDEN_KEYS) {
+    if (k in partial) { copy = copy || { ...partial }; delete copy[k]; }
+  }
+  return copy || partial;
+}
+// store.patch() hands back a brand-new cfg object, so garden's live state has to be
+// written back onto it or the next save would persist a stale snapshot.
+function reattachGarden() {
+  gardenPersistInto(cfg, garden.snapshot());
+}
+
+function initGarden() {
+  garden.start(cfg, {
+    persist: gardenPersist,
+    readTasks: () => cfg.tasks || []
+  });
+  garden.on('peers', peers => broadcast('garden-peers', peers));
+  garden.on('data', d => broadcast('garden-data', d));
+  garden.on('notify', n => pushNotif(n));
+}
+
+// ---- notifications ----
+// One queue, owned by main, so the bud (which shows the pulse) and the overlay
+// (which shows the cards) can never disagree about what is still unseen. Nothing
+// is marked seen until the user actually rests the cursor on the bud and reads it.
+const NOTIF_CAP = 20;
+let notifs = [];
+let peeking = false;
+
+function notifState() {
+  return { count: notifs.length, peeking };
+}
+
+function pushNotifState() {
+  const s = notifState();
+  budWin?.webContents.send('notif-state', s);
+  overlay?.webContents.send('notif-state', s);
+}
+
+function pushNotif(n) {
+  // Do not disturb silences the interruption, not the message: it still lands in
+  // the conversation and still counts as unread, it just never surfaces itself.
+  if (cfg.notifications?.dnd) return;
+  // Reading the thread in Settings is already an acknowledgement — don't stack a
+  // toast on top of the conversation the user is looking at.
+  if (settingsFocusedOn(n.peerId)) return;
+
+  notifs.push(n);
+  if (notifs.length > NOTIF_CAP) notifs = notifs.slice(-NOTIF_CAP);
+
+  if (!uiFlags.ringOpen && !uiFlags.uiActive) { uiFlags.displayOnly = true; applyOverlayState(); }
+  overlay?.webContents.send('notif-push', { notif: n, peeking });
+  pushNotifState();
+}
+
+function settingsFocusedOn(peerId) {
+  if (!settingsWin || settingsWin.isDestroyed() || !settingsWin.isVisible() || !settingsWin.isFocused()) return false;
+  return gardenViewing.tab === 'garden' && gardenViewing.peerId === peerId;
+}
+// Settings reports which conversation is on screen so notifications for it stay quiet.
+const gardenViewing = { tab: null, peerId: null };
+
+const PEEK_MAX_MS = 45000;
+let peekCapTimer = null;
+
+function setPeek(on) {
+  on = !!on;
+  if (on === peeking) return;
+  peeking = on;
+  clearTimeout(peekCapTimer); peekCapTimer = null;
+  if (on) {
+    if (!notifs.length) { peeking = false; return; }
+    // Nothing should hold a peek open this long. If some path ever loses its
+    // mouseleave, close it rather than leave the overlay taking clicks; the
+    // notifications stay unread, so nothing is lost by being cautious.
+    peekCapTimer = setTimeout(() => { peekCapTimer = null; endPeek(); }, PEEK_MAX_MS);
+    if (!uiFlags.ringOpen && !uiFlags.uiActive) uiFlags.displayOnly = true;
+    overlay?.webContents.send('notif-peek', { on: true, list: notifs });
+  } else {
+    overlay?.webContents.send('notif-peek', { on: false, list: [] });
+  }
+  applyOverlayState();     // interactivity follows the peek, both ways
+  pushNotifState();
+}
+
+// The peek is held open by two independent surfaces — the bud and the cards
+// themselves — because the cursor has to cross the gap between them. Closing waits
+// out a short grace so that trip never reads as "left".
+const peekHold = { bud: false, cards: false };
+let peekOffTimer = null;
+
+function setPeekSource(src, on, keep) {
+  peekHold[src] = !!on;
+  if (peekHold.bud || peekHold.cards) {
+    clearTimeout(peekOffTimer); peekOffTimer = null;
+    setPeek(true);
+    return;
+  }
+  // keep: the peek is being closed by a press or a drag, not by the user finishing
+  // with it. Take the cards away but leave the notifications — and the pulse — alone.
+  if (keep) {
+    clearTimeout(peekOffTimer); peekOffTimer = null;
+    setPeek(false);
+    return;
+  }
+  if (peekOffTimer) return;
+  peekOffTimer = setTimeout(() => {
+    peekOffTimer = null;
+    if (peekHold.bud || peekHold.cards) return;
+    const wasOpen = peeking;
+    setPeek(false);
+    if (wasOpen) markNotifsSeen();   // read and dismissed, in one gesture
+  }, 340);
+}
+
+// The ring taking over the screen must not count as reading anything, so this
+// closes the peek but leaves the queue — and the pulse — intact.
+function abortPeek() {
+  if (!peeking && !peekOffTimer) return;
+  endPeek();
+}
+
+// A completed read: the peek was open, and the cursor left it. Only this clears the
+// pulse — a drag, a click, or a cursor that merely passed over the bud does not.
+function markNotifsSeen() {
+  if (!notifs.length) return;
+  notifs = [];
+  endPeek();
+}
+
+function dropNotif(id) {
+  const before = notifs.length;
+  notifs = notifs.filter(n => n.id !== id);
+  if (notifs.length === before) return;
+  if (!notifs.length) { endPeek(); return; }
+  overlay?.webContents.send('notif-peek', { on: peeking, list: notifs });
+  pushNotifState();
+}
+
+// Emptying the queue has to close the peek too. Leaving `peeking` set would keep a
+// fullscreen, now-cardless overlay taking clicks — every press anywhere on screen
+// would vanish into it — so every path that drains the queue funnels through here.
+function endPeek() {
+  clearTimeout(peekOffTimer); peekOffTimer = null;
+  clearTimeout(peekCapTimer); peekCapTimer = null;
+  peekHold.bud = peekHold.cards = false;
+  peeking = false;
+  overlay?.webContents.send('notif-peek', { on: false, list: [] });
+  applyOverlayState();
+  pushNotifState();
+}
+
 // ---- ipc ----
 function wireIPC() {
   ipcMain.handle('get-config', () => cfg);
+  // ---- garden ipc ----
+  // Every mutation goes through garden so there is exactly one writer for chat state.
+  ipcMain.handle('garden-data', () => garden.data());
+  ipcMain.handle('garden-send-message', (_e, { peerId, text }) => garden.sendMessage(peerId, text));
+  ipcMain.handle('garden-send-task', (_e, { peerId, task }) => garden.sendTask(peerId, task || {}));
+  ipcMain.handle('garden-request-matrix', (_e, { peerId }) => garden.requestMatrix(peerId));
+  ipcMain.handle('garden-answer-task', async (_e, { inboxId, accepted, q }) => {
+    const r = await garden.answerTask(inboxId, accepted, q);
+    if (r.ok && accepted) {
+      // Land the task in the local matrix here rather than in the renderer, so an
+      // accept sticks even if Settings is closed the moment after the click.
+      const list = Array.isArray(cfg.tasks) ? cfg.tasks.slice() : [];
+      const id = 'gd-' + Math.random().toString(36).slice(2, 9);
+      list.push({
+        id, text: r.item.title, desc: r.item.desc || '', q: q || r.item.preferredQ,
+        done: false, created: Date.now(),
+        fromId: r.item.fromId, fromName: r.item.fromName   // who to tell when it is done
+      });
+      cfg = store.patch({ tasks: list });
+      reattachGarden();
+      broadcast('config-changed', cfg);
+    }
+    return r;
+  });
+  ipcMain.handle('garden-mark-read', (_e, { peerId }) => garden.markRead(peerId));
+  ipcMain.handle('garden-report-done', (_e, { peerId, title }) => garden.reportDone(peerId, title));
+  ipcMain.handle('garden-ack-key', (_e, { peerId }) => garden.ackKey(peerId));
+  ipcMain.handle('garden-clear-chat', (_e, { peerId }) => garden.clearChat(peerId));
+  ipcMain.handle('garden-forget-peer', (_e, { peerId }) => garden.forgetPeer(peerId));
+  ipcMain.handle('garden-set-name', (_e, name) => { garden.setName(name); return garden.identity(); });
+  ipcMain.handle('garden-set-public', (_e, pub) => { garden.setPublic(pub); return garden.identity(); });
+  ipcMain.handle('garden-set-avatar', (_e, a) => { garden.setAvatar(a); return garden.identity(); });
+  ipcMain.handle('garden-avatars', () => AVATARS);
+  ipcMain.on('garden-viewing', (_e, v) => {
+    gardenViewing.tab = v?.tab || null;
+    gardenViewing.peerId = v?.peerId || null;
+  });
+
+  // ---- notification ipc ----
+  ipcMain.handle('notif-list', () => ({ list: notifs, ...notifState() }));
+  ipcMain.on('notif-open', (_e, { id, peerId }) => {
+    dropNotif(id);
+    // Settings is about to cover the cursor, so no mouseleave will ever arrive to
+    // close the peek. End it here, keeping whatever is still unread — and its pulse.
+    endPeek();
+    createSettings('garden', 'garden-peer:' + peerId);
+  });
+  ipcMain.on('notif-dismiss', (_e, { id }) => dropNotif(id));
+  ipcMain.on('notif-seen', () => markNotifsSeen());
+  ipcMain.on('notif-hover', (_e, on) => setPeekSource('cards', !!on));
 
   ipcMain.handle('patch-config', (_e, partial) => {
+    partial = stripGardenKeys(partial);
     if (partial && partial.__reset) {
       cfg = store.defaults();
       cfg.seenOnboarding = true;
       store.save(cfg);
+      garden.hydrate(cfg);   // a reset clears conversations too, and mints a new identity
     } else {
       const hadHotkeys = JSON.stringify([cfg.hotkeys, cfg.quickfire]);
       const hadSize = cfg.bud.size;
@@ -1107,6 +1347,11 @@ function wireIPC() {
         const c = budCenter();
         placeBud(c.x, c.y); // resize the window around the same center
       }
+      reattachGarden();   // store.patch() returned a fresh object; put garden's live state back on it
+      // Switching it on should clear whatever is already glowing, or the pulse
+      // outlives the decision that was meant to stop it.
+      if (cfg.notifications?.dnd) { notifs = []; endPeek(); }
+      garden.setDnd(cfg.notifications?.dnd === true);
     }
     broadcast('config-changed', cfg);
     return cfg;
@@ -1126,7 +1371,7 @@ function wireIPC() {
 
   ipcMain.handle('execute', (_e, node) => execute(node));
   ipcMain.handle('list-apps', () => listApps());
-  ipcMain.handle('open-settings', (_e, tab) => createSettings(tab));
+  ipcMain.handle('open-settings', (_e, tab, cmd) => createSettings(tab, cmd));
   ipcMain.handle('quit', () => app.quit());
   ipcMain.handle('get-version', () => app.getVersion());
   ipcMain.handle('set-autostart', (_e, v) => setAutostart(!!v));
@@ -1201,6 +1446,7 @@ function wireIPC() {
     uiFlags.ringOpen = !!s.ringOpen;
     uiFlags.uiActive = !!s.uiActive;
     uiFlags.displayOnly = !!s.displayOnly;
+    if (s.ringOpen) abortPeek();
     if (s.ringOpen && !ringConfirmed) {
       ringConfirmed = true;
       setTimeout(() => { if (ringConfirmed) concealBud(); }, 60); // after the overlay paints its bud
@@ -1241,6 +1487,10 @@ function wireIPC() {
         overlay?.webContents.send('focus-tip', { on: !!m.on, ...focusSnapshot() });
         break;
       }
+      // The bud only asks to peek once the cursor has genuinely settled on it;
+      // a drag or a tap never gets here, so neither can consume a notification.
+      case 'notif-peek': setPeekSource('bud', m.on, m.keep); break;
+      case 'notif-seen': markNotifsSeen(); break;
       case 'key': overlay?.webContents.send('bud-key', { key: m.key, shift: !!m.shift }); break;
       case 'drag': placeBud(m.cx, m.cy); break;
       case 'drag-end': {
@@ -1425,6 +1675,8 @@ if (!gotLock) {
       setAutostart(true);
       store.save(cfg);
     }
+    initGarden();
+    garden.setDnd(cfg.notifications?.dnd === true);
     wireIPC();
     registerShortcuts();
     // Let the hidden voice window use the microphone without prompting.
@@ -1450,6 +1702,9 @@ if (!gotLock) {
     if (cfg.updates?.autoCheck !== false) setTimeout(() => checkForUpdates(true), 4000);
   });
 
+  // Tell the network we're leaving instead of letting peers time us out, and flush
+  // any debounced chat writes before the process goes.
+  app.on('before-quit', () => garden.stop());
   app.on('will-quit', () => globalShortcut.unregisterAll());
   app.on('window-all-closed', () => app.quit());
 }

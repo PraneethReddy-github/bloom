@@ -320,11 +320,26 @@ function defaults() {
       sounds: { focusEnd: 'chime', breakEnd: 'bell', volume: 0.7 }
     },
     tasks: [],                        // Eisenhower cards: {id, text, q, done, created}
+    // LAN collaboration. `garden.id` is this install's permanent identity on the
+    // network — names and IPs both move, so everything else keys off the id.
+    // gardenSchema is deliberately absent here: its absence is what triggers the
+    // one-time migration off the old IP-keyed layout.
+    garden: { id: null, name: '', avatar: null, public: false },
+    gardenPeople: {},                 // id -> {id, name, ip, port, public, lastSeen}
+    gardenChats: {},                  // id -> [{id, dir, kind, text, ts, status}]
+    gardenUnread: {},                 // id -> count
+    gardenInbox: [],                  // tasks others sent you, awaiting an answer
+    gardenOutbox: [],                 // frames held for peers who went offline
+    // Kept outside `garden` on purpose: garden owns the keys in there and
+    // rewrites them wholesale, so a preference parked alongside would be
+    // erased the next time a peer was remembered.
+    notifications: { dwellMs: 1000, dnd: false },
     pinnedIds: ['term-home', 'playpause', 'worktabs'],
     seenOnboarding: false,
     seenTour: false,                  // settings-window coach marks, shown once
     focusMigrated: false,             // flipped by the one-time Focus/Tasks backfill on load
     autostartDefaulted: false,        // first run enables launch-at-login once
+    notifDwellDefaulted: false,       // one-time reset of the hover-to-read delay
     settingsBounds: null,
     profiles: { active: 'Default', saved: {} },   // saved[name] = {root, pinnedIds}
     root: defaultTree()
@@ -363,6 +378,18 @@ function migrateFocus(cfg) {
   return true;
 }
 
+// The hover-to-read delay first shipped at 2s and turned out to be a long hold.
+// Move anyone still sitting on that original default down to the new one, exactly
+// once, so a delay someone later chooses deliberately is never overridden.
+function migrateNotifDwell(cfg) {
+  if (cfg.notifDwellDefaulted) return false;
+  cfg.notifDwellDefaulted = true;
+  if (cfg.notifications && cfg.notifications.dwellMs === 2000) {
+    cfg.notifications.dwellMs = 1000;
+  }
+  return true;
+}
+
 function load() {
   if (cache) return cache;
   ensureDirs();
@@ -373,7 +400,8 @@ function load() {
       if (!parsed || typeof parsed !== 'object' || !parsed.root) continue;
       cache = merge(defaults(), parsed);
       if (f !== FILE) recoveredFrom = path.basename(f);
-      if (migrateFocus(cache)) save(cache);
+      const migrated = [migrateFocus(cache), migrateNotifDwell(cache)].some(Boolean);
+      if (migrated) save(cache);
       return cache;
     } catch { /* try the next backup */ }
   }

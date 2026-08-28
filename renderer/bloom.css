@@ -273,6 +273,78 @@ body.testwall {
   animation: none;
 }
 
+/* ---- unread halo ----
+   Two things at once, and they say different things: a steady accent rim means
+   "something is waiting", the slow sonar rings mean "it is still waiting". Both
+   live outside the bud body so the breathe animation there is never disturbed. */
+#bud .notif-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+#bud .notif-halo i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--acc-a-rgb), 0.6);
+  opacity: 0;
+}
+
+#bud.has-notif .notif-halo {
+  opacity: 1;
+}
+
+#bud.has-notif .notif-halo i {
+  animation: notif-sonar 2.7s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+#bud.has-notif .notif-halo i:nth-child(2) {
+  animation-delay: 1.35s;
+}
+
+@keyframes notif-sonar {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+
+  65% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+#bud.has-notif .bud-glass {
+  border-color: rgba(var(--acc-a-rgb), 0.85);
+  box-shadow: 0 0 14px rgba(var(--acc-a-rgb), 0.5);
+}
+
+/* Reading them calms everything down — the rings stop, the rim stays lit until the
+   queue actually clears. Movement is feedback, and there is nothing left to flag. */
+#bud.peeking .notif-halo {
+  opacity: 0;
+}
+
+#bud.peeking .bud-glass {
+  border-color: rgba(var(--acc-a-rgb), 0.95);
+  box-shadow: 0 0 20px rgba(var(--acc-a-rgb), 0.65);
+}
+
+/* Dragging and the open dial both hand the bud's surroundings to something else. */
+#bud.dragging .notif-halo,
+#stage.open #bud .notif-halo {
+  opacity: 0;
+}
+
 #bud.gone {
   opacity: 0 !important;
   pointer-events: none;
@@ -1190,10 +1262,11 @@ body.testwall {
 }
 
 .toast {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 9px 14px;
+  padding: 9px 36px 9px 14px; /* added right padding to prevent text overlap */
   border-radius: 13px;
   pointer-events: auto;
   animation: toastin 0.22s cubic-bezier(0.3, 1.3, 0.5, 1);
@@ -1230,9 +1303,17 @@ body.testwall {
 }
 
 .toast .t-msg {
-  font-size: 12.5px;
-  font-weight: 550;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   line-height: 1.35;
+  overflow: hidden;
+}
+
+.toast .t-msg span.t-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .toast .t-msg small {
@@ -1240,6 +1321,9 @@ body.testwall {
   color: var(--ink-dim);
   font-size: 11px;
   font-weight: 450;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .toast button {
@@ -1257,6 +1341,161 @@ body.testwall {
 
 .toast button:hover {
   filter: brightness(1.1);
+}
+
+.toast .t-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast .t-dismiss:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  filter: none;
+}
+
+/* ---- garden notification cards ----
+   Same glass shell as every other toast — a notification is not a different species
+   of message, it just carries more structure inside the box. */
+.toast.notif {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px 10px 10px;
+  width: 316px;
+  max-width: 316px;
+  cursor: default;
+}
+
+.toast.notif .n-face {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The sender's chosen emoji sits on a disc tinted from their peer id — the same
+     pairing the Garden tab uses, so a face reads the same in both places. */
+  font-size: 17px;
+  line-height: 1;
+  background: linear-gradient(145deg, hsl(var(--hue), 46%, 30%), hsl(var(--hue), 40%, 20%));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.toast.notif .n-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.toast.notif .n-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.toast.notif .n-who {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: none;
+  max-width: 55%;
+}
+
+.toast.notif .n-what {
+  font-size: 11px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast.notif .n-age {
+  margin-left: auto;
+  flex: none;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two lines is the honest preview length: enough to decide whether to open it,
+   never enough to become a wall hanging off the bud. */
+.toast.notif .n-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.toast.notif .n-kind {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 1px;
+  opacity: 0.55;
+  display: flex;
+}
+
+.toast.notif.ok .n-kind { color: #34D399; opacity: 0.9; }
+.toast.notif.err .n-kind { color: #F87171; opacity: 0.9; }
+.toast.notif.info .n-kind { color: var(--acc-a); }
+
+.toast.notif .n-acts {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.toast.notif .n-btn {
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ink);
+}
+
+.toast.notif .n-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  filter: none;
+}
+
+.toast.notif .n-btn.ok {
+  border: none;
+  background: linear-gradient(135deg, var(--acc-a), var(--acc-b));
+  color: #081018;
+}
+
+.toast.notif .n-btn.ok:hover {
+  filter: brightness(1.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #bud.has-notif .notif-halo i { animation: none; opacity: 0.5; }
 }
 
 /* ---- context menu ---- */
@@ -1579,6 +1818,16 @@ body.flat #bud:hover .bud-glass {
 
 .flat .toast button {
   background: var(--acc-a);
+  color: #ffffff;
+}
+
+.flat .toast button.t-dismiss {
+  background: none;
+  color: var(--ink-dim);
+}
+
+.flat .toast button.t-dismiss:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
 }
 

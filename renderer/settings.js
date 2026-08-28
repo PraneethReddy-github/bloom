@@ -12,7 +12,7 @@
   let modalOpen = false;
   let midEdit = false; // true while a text input inside a tab is focused
 
-  const TABS = ['actions', 'appearance', 'hotkeys', 'focus', 'profiles', 'general', 'about'];
+  const TABS = ['actions', 'appearance', 'hotkeys', 'focus', 'garden', 'profiles', 'general', 'about'];
 
   // ---- utils ----
   function debounce(fn, ms) {
@@ -176,6 +176,7 @@
     $$('.rail-item').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     TABS.forEach(t => { $('#tab-' + t).hidden = t !== tab; });
     renderTab(tab);
+    reportViewing();   // leaving Garden re-arms notifications for the thread we left
     if (!opts || !opts.noFocus) $('#content').scrollTop = 0;
   }
 
@@ -186,6 +187,7 @@
     else if (tab === 'hotkeys') renderHotkeys(pane);
     else if (tab === 'focus') renderFocus(pane);
     else if (tab === 'profiles') renderProfiles(pane);
+    else if (tab === 'garden') renderGarden(pane);
     else if (tab === 'general') renderGeneral(pane);
     else if (tab === 'about') renderAbout(pane);
     // restart the enter animation
@@ -233,6 +235,9 @@
     { tab: 'focus', sid: 'focus-prefs', label: 'Timer behaviour', kw: 'pomodoro auto break ring bud show' },
     { tab: 'focus', sid: 'focus-sounds', label: 'Timer sounds', kw: 'sound ringtone chime bell gong volume audio alert' },
     { tab: 'focus', sid: 'matrix', label: 'Eisenhower matrix', kw: 'task todo eisenhower matrix urgent important priority quadrant delegate schedule board' },
+    { tab: 'appearance', sid: 'notifDwell', label: 'Hover to read notifications', kw: 'notification hover delay dwell bud peek garden message read' },
+    { tab: 'garden', sid: 'garden-peers', label: 'LAN collaboration', kw: 'garden lan peers network send task message chat public' },
+    { tab: 'garden', sid: 'garden-prefs', label: 'Your name and face', kw: 'garden name avatar face emoji animal icon identity matrix share' },
     { tab: 'profiles', sid: 'profiles-list', label: 'Profiles', kw: 'profile switch work gaming presentation save' },
     { tab: 'profiles', sid: 'templates', label: 'Starter templates', kw: 'template starter default maker coordinator explorer preset profile setup' },
     { tab: 'general', sid: 'autostart', label: 'Launch at login', kw: 'autostart login startup launch boot' },
@@ -350,10 +355,12 @@
   document.addEventListener('focusin', e => {
     if (e.target.matches('#content input[type=text], #content input:not([type]), #content textarea')) midEdit = true;
   });
-  document.addEventListener('focusout', () => { setTimeout(() => {
-    const a = document.activeElement;
-    midEdit = !!(a && a.closest && a.closest('#content') && a.matches('input[type=text], input:not([type]), textarea'));
-  }, 0); });
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      midEdit = !!(a && a.closest && a.closest('#content') && a.matches('input[type=text], input:not([type]), textarea'));
+    }, 0);
+  });
 
   let capturing = false; // set by hotkey capture
 
@@ -463,8 +470,8 @@
            ${isFolder ? `aria-expanded="${!collapsed.has(node.id)}"` : ''}>
         <span class="tr-handle" title="Drag to move" draggable="true">${icon('drag', 14)}</span>
         ${isFolder
-          ? `<button class="tr-chev ${collapsed.has(node.id) ? '' : 'open'}" aria-label="Toggle folder" tabindex="-1">${icon('chevron-right', 13)}</button>`
-          : `<span class="tr-chev-spacer"></span>`}
+        ? `<button class="tr-chev ${collapsed.has(node.id) ? '' : 'open'}" aria-label="Toggle folder" tabindex="-1">${icon('chevron-right', 13)}</button>`
+        : `<span class="tr-chev-spacer"></span>`}
         <span class="tr-icon"${color}>${icon(node.icon, 18)}</span>
         <span class="tr-label">${esc(node.label || node.id)}</span>
         ${crumb ? `<span class="tr-crumb">${esc(crumb)}</span>` : ''}
@@ -693,7 +700,7 @@
         try {
           e.dataTransfer.setData('text/plain', id);
           e.dataTransfer.setDragImage(row, 24, row.offsetHeight / 2);
-        } catch (_) {}
+        } catch (_) { }
       });
       handle.addEventListener('dragend', () => {
         $$('.tree-row.dragging').forEach(r => r.classList.remove('dragging'));
@@ -975,8 +982,8 @@
       const def = TYPE_DEFS.find(t => t.type === draft.type);
       $('#wz-sub', modal).textContent =
         step === 1 ? 'Pick what this node does'
-        : step === 2 ? `${def ? def.name : ''} — parameters`
-        : 'Label, icon & look';
+          : step === 2 ? `${def ? def.name : ''} — parameters`
+            : 'Label, icon & look';
       btnNext.textContent = step === 3 ? 'Save' : 'Next';
       body.scrollTop = 0;                 // steps share one scroll container — don't inherit the last step's offset
       if (step === 1) renderStep1();
@@ -1492,7 +1499,8 @@
     {
       title: 'The bud', sliders: [
         { sid: 'budSize', label: 'Bud size', sub: 'Diameter of the resting bud', min: 32, max: 64, step: 1, get: () => cfg.bud.size, set: v => ({ bud: { size: v } }), fmt: v => v + 'px' },
-        { sid: 'budOpacity', label: 'Bud idle opacity', sub: 'How faded the bud looks when you’re not using it', min: 0.2, max: 1, step: 0.01, get: () => cfg.bud.idleOpacity, set: v => ({ bud: { idleOpacity: v } }), fmt: v => Math.round(v * 100) + '%' }
+        { sid: 'budOpacity', label: 'Bud idle opacity', sub: 'How faded the bud looks when you’re not using it', min: 0.2, max: 1, step: 0.01, get: () => cfg.bud.idleOpacity, set: v => ({ bud: { idleOpacity: v } }), fmt: v => Math.round(v * 100) + '%' },
+        { sid: 'notifDwell', label: 'Hover to read notifications', sub: 'How long the cursor rests on the bud before waiting notifications open', min: 300, max: 3000, step: 100, get: () => Number((cfg.notifications || {}).dwellMs) || 1000, set: v => ({ notifications: { dwellMs: v } }), fmt: v => (v / 1000).toFixed(1) + 's' }
       ]
     }
   ];
@@ -1562,6 +1570,7 @@
         const part = s.set(v);
         if (part.appearance) Object.assign(cfg.appearance, part.appearance);
         if (part.bud) Object.assign(cfg.bud, part.bud);
+        if (part.notifications) cfg.notifications = { ...(cfg.notifications || {}), ...part.notifications };
         renderPreview();
         debouncedPatch('sl-' + s.sid, part);
       });
@@ -1770,10 +1779,10 @@
           </div>
         </div>
         ${[
-          { sid: 'scrollCycle', label: 'Scroll over bud cycles pinned actions', key: 'scrollCycle', obj: 'behavior' },
-          { sid: 'edgeSnap', label: 'Snap bud to screen edges', key: 'edgeSnap', obj: 'behavior' },
-          { sid: 'budPinned', label: 'Pin bud position', sub: 'Disables dragging', key: 'pinned', obj: 'bud' }
-        ].map(t => `
+        { sid: 'scrollCycle', label: 'Scroll over bud cycles pinned actions', key: 'scrollCycle', obj: 'behavior' },
+        { sid: 'edgeSnap', label: 'Snap bud to screen edges', key: 'edgeSnap', obj: 'behavior' },
+        { sid: 'budPinned', label: 'Pin bud position', sub: 'Disables dragging', key: 'pinned', obj: 'bud' }
+      ].map(t => `
           <div class="ctl-row" data-sid="${t.sid}" data-search="${esc(t.label.toLowerCase())}">
             <div class="ctl-label"><div class="t">${esc(t.label)}</div>${t.sub ? `<div class="s">${esc(t.sub)}</div>` : ''}</div>
             <div class="ctl-input"><label class="tgl"><input type="checkbox" data-bkey="${t.obj}.${t.key}" ${(t.obj === 'bud' ? cfg.bud : b)[t.key] ? 'checked' : ''} aria-label="${esc(t.label)}"><span class="knob"></span></label></div>
@@ -1788,7 +1797,7 @@
           <div class="ctl-input">
             <select class="in sel" id="vo-model" style="width:200px">
               ${['Xenova/whisper-tiny.en', 'Xenova/whisper-base.en', 'Xenova/whisper-small.en'].map(m =>
-                `<option value="${m}" ${(v.model || 'Xenova/whisper-base.en') === m ? 'selected' : ''}>${m.split('/')[1].replace('whisper-', '').replace('.en', ' (English)')}</option>`).join('')}
+        `<option value="${m}" ${(v.model || 'Xenova/whisper-base.en') === m ? 'selected' : ''}>${m.split('/')[1].replace('whisper-', '').replace('.en', ' (English)')}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -1877,7 +1886,7 @@
       if (!voiceSel.isConnected) return;
       voiceSel.innerHTML = `<option value="">System default</option>` +
         (list || []).map(vo => `<option value="${esc(vo.id)}" ${vo.id === v.ttsVoice ? 'selected' : ''}>${esc(vo.label)}</option>`).join('');
-    }).catch(() => {});
+    }).catch(() => { });
     voiceSel.addEventListener('change', e => { patch({ voice: { ttsVoice: e.target.value } }); bloom.previewVoice(e.target.value); });
   }
 
@@ -2047,39 +2056,45 @@
       <h1>Focus &amp; Tasks</h1>
       <p class="tab-desc">A pomodoro that draws itself as a ring around the bud, and a matrix for deciding what actually deserves the next block.</p>
 
-      <h2 class="sec first">Timer</h2>
-      <div class="card" data-sid="focus-timer" data-search="pomodoro timer focus break start pause stop minutes"><div id="focus-live"></div></div>
-
-      <div class="card" data-sid="focus-prefs" data-search="pomodoro auto break notify ring bud">
-        <div class="ctl-row">
-          <div class="ctl-label"><div class="t">Start the break automatically</div><div class="s">Otherwise the timer stops when the focus block ends</div></div>
-          <div class="ctl-input"><label class="tgl"><input type="checkbox" id="f-autobreak" ${f.autoStartBreak !== false ? 'checked' : ''} aria-label="Auto-start break"><span class="knob"></span></label></div>
+      <div class="focus-layout">
+        <div class="focus-section-matrix">
+          <h2 class="sec first">Eisenhower matrix</h2>
+          <p class="tab-desc" style="margin-bottom:14px">
+            Type into a quadrant to add a task. <b>Drag a card</b> between quadrants as things change, or use its
+            ${icon('shuffle', 12)} button. ${icon('timer', 12)} starts a focus block on that one task — pick the length, or type your own. The
+            circle on the left marks it done.</p>
+          <div class="matrix" data-sid="matrix" data-search="task todo eisenhower urgent important quadrant delegate schedule"></div>
         </div>
-        <div class="ctl-row">
-          <div class="ctl-label"><div class="t">Show the ring on the bud</div><div class="s">Focus is green, breaks are red, paused is grey — the same in every profile</div></div>
-          <div class="ctl-input"><label class="tgl"><input type="checkbox" id="f-ring" ${f.showRing !== false ? 'checked' : ''} aria-label="Show ring"><span class="knob"></span></label></div>
-        </div>
-      </div>
 
-      <h2 class="sec">Sounds</h2>
-      <div class="card" data-sid="focus-sounds" data-search="sound ringtone chime bell alert volume audio notify">
-        ${soundRow('focusEnd', 'When a focus block ends', 'Plays as the break begins, or as the block closes out')}
-        ${soundRow('breakEnd', 'When a break ends', 'Your cue to start the next block')}
-        <div class="ctl-row">
-          <div class="ctl-label"><div class="t">Volume</div></div>
-          <div class="ctl-input">
-            <input type="range" class="sld" id="f-vol" min="0" max="100" step="5" value="${Math.round((sounds.volume ?? 0.7) * 100)}" aria-label="Sound volume">
-            <span class="readout" id="f-vol-val">${Math.round((sounds.volume ?? 0.7) * 100)}%</span>
+        <div class="focus-section-controls">
+          <h2 class="sec">Timer</h2>
+          <div class="card" data-sid="focus-timer" data-search="pomodoro timer focus break start pause stop minutes"><div id="focus-live"></div></div>
+
+          <div class="card" data-sid="focus-prefs" data-search="pomodoro auto break notify ring bud">
+            <div class="ctl-row">
+              <div class="ctl-label"><div class="t">Start the break automatically</div><div class="s">Otherwise the timer stops when the focus block ends</div></div>
+              <div class="ctl-input"><label class="tgl"><input type="checkbox" id="f-autobreak" ${f.autoStartBreak !== false ? 'checked' : ''} aria-label="Auto-start break"><span class="knob"></span></label></div>
+            </div>
+            <div class="ctl-row">
+              <div class="ctl-label"><div class="t">Show the ring on the bud</div><div class="s">Focus is green, breaks are red, paused is grey — the same in every profile</div></div>
+              <div class="ctl-input"><label class="tgl"><input type="checkbox" id="f-ring" ${f.showRing !== false ? 'checked' : ''} aria-label="Show ring"><span class="knob"></span></label></div>
+            </div>
+          </div>
+
+          <h2 class="sec">Sounds</h2>
+          <div class="card" data-sid="focus-sounds" data-search="sound ringtone chime bell alert volume audio notify">
+            ${soundRow('focusEnd', 'When a focus block ends', 'Plays as the break begins, or as the block closes out')}
+            ${soundRow('breakEnd', 'When a break ends', 'Your cue to start the next block')}
+            <div class="ctl-row">
+              <div class="ctl-label"><div class="t">Volume</div></div>
+              <div class="ctl-input">
+                <input type="range" class="sld" id="f-vol" min="0" max="100" step="5" value="${Math.round((sounds.volume ?? 0.7) * 100)}" aria-label="Sound volume">
+                <span class="readout" id="f-vol-val">${Math.round((sounds.volume ?? 0.7) * 100)}%</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <h2 class="sec">Eisenhower matrix</h2>
-      <p class="tab-desc" style="margin-bottom:14px">
-        Type into a quadrant to add a task. <b>Drag a card</b> between quadrants as things change, or use its
-        ${icon('shuffle', 12)} button. ${icon('timer', 12)} starts a focus block on that one task — pick the length, or type your own. The
-        circle on the left marks it done.</p>
-      <div class="matrix" data-sid="matrix" data-search="task todo eisenhower urgent important quadrant delegate schedule"></div>`;
+      </div>`;
 
     $('#f-autobreak', pane).addEventListener('change', e => patch({ focus: { autoStartBreak: e.target.checked } }));
     $('#f-ring', pane).addEventListener('change', e => patch({ focus: { showRing: e.target.checked } }));
@@ -2130,6 +2145,17 @@
     });
   }
 
+  let runCardSig = '';
+  function syncRunningCard(s) {
+    const pane = $('#tab-focus');
+    if (!pane || !$('.matrix', pane)) return;
+    const sig = `${s.phase !== 'idle' ? s.taskId || '' : ''}`;
+    if (sig !== runCardSig) { runCardSig = sig; renderMatrix(pane); return; }
+    if (!sig) return;
+    const el = $(`.tcard[data-id="${CSS.escape(sig)}"] .trun`, pane);
+    if (el) el.textContent = fmtLeft(s.remainMs);
+  }
+
   // ---- live timer ----
   function paintFocusLive(s) {
     const box = $('#focus-live');
@@ -2156,7 +2182,7 @@
       return `<div class="fl-presets">
           ${presets.map(n => `<button class="fl-chip" data-f="${n.params.focusMin}" data-b="${n.params.breakMin}">
               ${icon('timer', 13)} ${esc(n.params.focusMin)} <span class="sep">/</span> ${esc(n.params.breakMin)}</button>`).join('')
-            || '<span class="hint">No presets yet — add one below.</span>'}
+        || '<span class="hint">No presets yet — add one below.</span>'}
           <button class="fl-chip ghost" id="fl-custom">${icon('plus', 13)} Custom</button>
         </div>`;
     };
@@ -2169,7 +2195,13 @@
     if (!running) {
       box.innerHTML = `
         <div class="fl-idle">
-          <div class="fl-copy"><div class="t">No timer running</div><div class="s">Pick a block — the ring appears around the bud and counts down.</div></div>
+          <svg class="fl-ring dim" width="82" height="82" viewBox="0 0 82 82" fill="none" aria-hidden="true">
+            <circle cx="41" cy="41" r="34" stroke="rgba(255,255,255,0.09)" stroke-width="6" stroke-dasharray="3 7" stroke-linecap="round"/>
+          </svg>
+          <div class="fl-copy">
+            <div class="t">Nothing running</div>
+            <div class="s">Pick a block and the ring wraps the bud, counting down.</div>
+          </div>
           ${presetsHTML()}
         </div>`;
       wirePresets();
@@ -2273,9 +2305,9 @@
   // ---- eisenhower matrix ----
   // Drag works, but it is invisible until you try it — so every card also carries an
   // explicit move button, and the quadrant tells you what to do when it is empty.
-  function renderMatrix(pane) {
+  function renderMatrix(pane, getList = tasks, doSave = saveTasks) {
     const box = $('.matrix', pane);
-    const all = tasks();
+    const all = getList();
     box.innerHTML = QUADRANTS.map(qd => {
       const items = all.filter(t => t.q === qd.q);
       const open = items.filter(t => !t.done).length;
@@ -2283,70 +2315,86 @@
         <section class="quad" data-q="${qd.q}" style="--q:${qd.color}">
           <header class="quad-head">
             <span class="quad-dot"></span>
-            <div><div class="quad-title">${qd.title}</div><div class="quad-sub">${qd.sub}</div></div>
+            <div style="flex:1"><div class="quad-title">${qd.title}</div><div class="quad-sub">${qd.sub}</div></div>
             <span class="quad-count">${items.length ? `${open} open` : ''}</span>
+            <button class="btn btn-sm qadd-head" data-add="${qd.q}" style="margin-left:8px;padding:0 6px;" title="Add Task" aria-label="Add to ${qd.title}">${icon('plus', 12)}</button>
           </header>
           <div class="quad-body">
             ${items.map(t => taskCardHTML(t)).join('')
-              || `<p class="quad-empty">Nothing here yet.<br><span>Type below to add your first one.</span></p>`}
-          </div>
-          <div class="quad-add">
-            <input class="qin" type="text" placeholder="Add to ${qd.title.toLowerCase()}…" maxlength="140" aria-label="Add to ${qd.title}">
-            <button class="btn btn-sm qadd" data-add="${qd.q}">${icon('plus', 12)} Add</button>
+        || `<p class="quad-empty">Nothing here yet.<br><span>Click + to add your first one.</span></p>`}
           </div>
         </section>`;
     }).join('');
-    wireMatrix(box);
+    wireMatrix(box, pane, getList, doSave);
   }
 
   function taskCardHTML(t) {
     return `
-      <article class="tcard ${t.done ? 'done' : ''}" draggable="true" data-id="${esc(t.id)}">
+      <article class="tcard ${t.done ? 'done' : ''} ${lastFocus.taskId === t.id && lastFocus.phase !== 'idle' ? 'running' : ''}" draggable="true" data-id="${esc(t.id)}">
         <button class="tcheck" data-a="done" title="${t.done ? 'Mark as not done' : 'Mark done'}" aria-label="Toggle done">${t.done ? icon('check', 12) : ''}</button>
-        <span class="ttext" data-a="edit" title="Click to rename">${esc(t.text)}</span>
+        <div class="ttext" data-a="edit" title="${esc(t.text)}${t.desc ? '\n\n' + esc(t.desc) : ''}">
+          <div class="ttext-title">${esc(t.text)}</div>
+        </div>
         <span class="tacts">
-          <button class="ticon" data-a="focus" title="Start a focus block on this — pick how long" aria-label="Focus on this">${icon('timer', 13)}</button>
+          ${lastFocus.taskId === t.id && lastFocus.phase !== 'idle'
+            ? `<span class="trun" title="${lastFocus.paused ? 'Paused' : (lastFocus.phase === 'break' ? 'On a break' : 'Focusing')}">${fmtLeft(lastFocus.remainMs)}</span>` : ''}
+          ${t.fromId ? `<span class="tfrom" title="Assigned by ${esc(t.fromName || 'someone')} — they hear about it when you tick it off">${icon('user', 11)}</span>` : ''}
+          ${t.desc ? `<span class="tnote" title="Has notes" aria-label="Has notes">${icon('list', 12)}</span>` : ''}
+          <button class="ticon tplay" data-a="focus" title="Work on this — pick a block length" aria-label="Start working on this">${icon('play', 13)}</button>
           <button class="ticon" data-a="move" title="Move to another quadrant" aria-label="Move">${icon('shuffle', 13)}</button>
           <button class="ticon danger" data-a="del" title="Delete" aria-label="Delete">${icon('trash', 13)}</button>
         </span>
       </article>`;
   }
 
-  function wireMatrix(box) {
-    const rerender = () => renderMatrix($('#tab-focus'));
+  function wireMatrix(box, pane, getList, doSave) {
+    const rerender = () => renderMatrix(pane, getList, doSave);
 
-    const addFrom = async inp => {
-      const text = inp.value.trim();
-      if (!text) { inp.focus(); return; }
-      inp.value = '';
-      const q = inp.closest('.quad').dataset.q;
-      await saveTasks([...tasks(), { id: slugId(text), text, q, done: false, created: Date.now() }]);
-      rerender();
-      $(`.quad[data-q="${q}"] .qin`, $('#tab-focus')).focus();   // keep typing in the same quadrant
-    };
-    $$('.qin', box).forEach(inp => {
-      inp.addEventListener('focus', () => { midEdit = true; });
-      inp.addEventListener('blur', () => { midEdit = false; });
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addFrom(inp); } });
-    });
-    $$('[data-add]', box).forEach(b => b.addEventListener('click', () =>
-      addFrom($(`.quad[data-q="${b.dataset.add}"] .qin`, box))));
+    $$('[data-add]', box).forEach(b => b.addEventListener('click', () => {
+      const q = b.dataset.add;
+      promptTaskModal(`Add to ${QMAP[q].title}`, '', '', async (text, desc) => {
+        await doSave([...getList(), { id: slugId(text), text, desc, q, done: false, created: Date.now() }]);
+        rerender();
+      });
+    }));
 
     $$('.tcard', box).forEach(card => {
       const id = card.dataset.id;
       card.querySelectorAll('[data-a]').forEach(el => el.addEventListener('click', async ev => {
-        const list = tasks();
+        const list = getList();
         const t = list.find(x => x.id === id);
         if (!t) return;
         const a = el.dataset.a;
-        if (a === 'done') { t.done = !t.done; await saveTasks(list); rerender(); }
-        else if (a === 'del') {
-          await saveTasks(list.filter(x => x.id !== id));
+        if (a === 'done') {
+          const nowDone = !t.done;
+          t.done = nowDone;
+          await doSave(list);
           rerender();
-          toast(`Deleted "${t.text}"`, { undo: async () => { await saveTasks([...tasks(), t]); rerender(); } });
+          if (nowDone && t.fromId) {
+            bloom.gardenReportDone(t.fromId, t.text);
+            toast(`${esc(t.fromName || 'They')} will be told it's done`, { kind: 'ok' });
+          }
+          // A block running on this task has nothing left to count down for.
+          if (nowDone && lastFocus.taskId === t.id) bloom.focusStop().then(focusLiveHandler);
+        }
+        else if (a === 'del') {
+          await doSave(list.filter(x => x.id !== id));
+          rerender();
+          toast(`Deleted "${t.text}"`, { undo: async () => { await doSave([...getList(), t]); rerender(); } });
         } else if (a === 'focus') { ev.stopPropagation(); openTaskTimerMenu(el, t); }
-        else if (a === 'move') { ev.stopPropagation(); openMoveMenu(el, t, rerender); }
-        else if (a === 'edit') inlineEditTask(el, t);
+        else if (a === 'move') { ev.stopPropagation(); openMoveMenu(el, t, rerender, getList, doSave); }
+        else if (a === 'edit') {
+           promptTaskModal('Edit Task', t.text, t.desc || '', async (text, desc) => {
+             const list = getList();
+             const updated = list.find(x => x.id === t.id);
+             if (updated) {
+               updated.text = text;
+               updated.desc = desc;
+               await doSave(list);
+               rerender();
+             }
+           });
+        }
       }));
 
       card.addEventListener('dragstart', e => {
@@ -2367,11 +2415,11 @@
         e.preventDefault();
         quad.classList.remove('over');
         const id = e.dataTransfer.getData('text/plain');
-        const list = tasks();
+        const list = getList();
         const t = list.find(x => x.id === id);
         if (!t || t.q === quad.dataset.q) return;
         t.q = quad.dataset.q;
-        await saveTasks(list);
+        await doSave(list);
         rerender();
         toast(`Moved to ${QMAP[t.q].title}`);
       });
@@ -2403,16 +2451,16 @@
     return { menu, close };
   }
 
-  function openMoveMenu(anchor, task, done) {
+  function openMoveMenu(anchor, task, done, getList, doSave) {
     const { menu, close } = openCardMenu(anchor, QUADRANTS.filter(q => q.q !== task.q).map(q =>
       `<button data-q="${q.q}"><i style="background:${q.color}"></i>${esc(q.title)}</button>`).join(''));
     $$('button', menu).forEach(b => b.addEventListener('click', async () => {
-      const list = tasks();
+      const list = getList();
       const t = list.find(x => x.id === task.id);
       close();
       if (!t) return;
       t.q = b.dataset.q;
-      await saveTasks(list);
+      await doSave(list);
       done();
       toast(`Moved to ${QMAP[t.q].title}`);
     }));
@@ -2452,32 +2500,558 @@
     [fEl, bEl].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); startCustom(); } }));
   }
 
-  function inlineEditTask(span, task) {
-    const input = document.createElement('input');
-    input.className = 'qin ttext-edit';
-    input.value = task.text;
-    input.maxLength = 140;
-    span.replaceWith(input);
-    midEdit = true;
-    input.focus(); input.select();
-    let settled = false;
-    const commit = async save => {
-      if (settled) return; settled = true;
-      midEdit = false;
-      const text = input.value.trim();
-      if (save && text && text !== task.text) {
-        const list = tasks();
-        const t = list.find(x => x.id === task.id);
-        if (t) { t.text = text; await saveTasks(list); }
-      }
-      renderMatrix($('#tab-focus'));
+  function promptTaskModal(titleText, initialText, initialDesc, onDone) {
+    const { modal, close } = openModal(`
+      <div class="modal-head"><h2>${esc(titleText)}</h2></div>
+      <div class="modal-body">
+        <div class="f-field">
+          <label>Task name</label>
+          <input class="in" id="pt-title" value="${esc(initialText)}" maxlength="140" placeholder="What needs doing?">
+        </div>
+        <div class="f-field">
+          <label>Description (optional)</label>
+          <textarea class="in" id="pt-desc" rows="4" style="resize:none;" placeholder="Add details or notes...">${esc(initialDesc)}</textarea>
+        </div>
+      </div>
+      <div class="modal-foot"><span class="spring"></span>
+        <button class="btn" id="pt-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pt-ok">Save</button>
+      </div>`);
+      
+    const titleInp = $('#pt-title', modal);
+    const descInp = $('#pt-desc', modal);
+    const done = () => { 
+      const t = titleInp.value.trim();
+      const d = descInp.value.trim();
+      if (!t) { titleInp.focus(); return; }
+      close(); 
+      onDone(t, d); 
     };
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
-      else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
-    });
-    input.addEventListener('blur', () => commit(true));
+    $('#pt-cancel', modal).addEventListener('click', close);
+    $('#pt-ok', modal).addEventListener('click', done);
+    titleInp.addEventListener('keydown', e => { if (e.key === 'Enter') done(); });
   }
+
+  // ==== GARDEN TAB ====
+  // Everything on screen is a view of main's garden state; this tab never writes it
+  // directly. That is what keeps a conversation consistent when a message lands
+  // while you are mid-sentence in the same thread.
+  let gd = { self: {}, people: [], chats: {}, unread: {}, inbox: [], outbox: [] };
+  let activePeerId = null;
+  let activeGardenView = 'chat';   // 'chat' | 'matrix'
+  let matrixCache = null;          // {peerId, state:'load'|'ok'|'err', tasks, error}
+
+  const gdPeer = id => gd.people.find(p => p.id === id) || null;
+  const gdChat = id => gd.chats[id] || [];
+  const gdQueued = id => gd.outbox.filter(o => o.to === id).length;
+
+  let gdAvatarList = [];
+  function gdHue(id) {
+    let h = 0;
+    for (let i = 0; i < (id || '').length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+    return h;
+  }
+  // The face is the peer's own choice; the tinted disc behind it stays keyed to
+  // their id, so two people who picked the same animal still read apart.
+  function gdAvatar(p, size) {
+    const s = size || 32;
+    return `<div class="gd-face" style="--hue:${gdHue(p.id)};width:${s}px;height:${s}px;font-size:${Math.round(s * 0.56)}px">${esc(p.avatar || '')}</div>`;
+  }
+  function gdAgo(ts) {
+    if (!ts) return 'never';
+    const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + 'm ago';
+    if (s < 86400) return Math.round(s / 3600) + 'h ago';
+    return Math.round(s / 86400) + 'd ago';
+  }
+  const gdClock = ts => new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const gdDay = ts => new Date(ts || Date.now()).toDateString();
+
+  // Tell main which thread is on screen, so a message you are already staring at
+  // never fires a notification behind the window.
+  function reportViewing() {
+    bloom.gardenViewing({
+      tab: currentTab,
+      peerId: (currentTab === 'garden' && activeGardenView === 'chat') ? activePeerId : null
+    });
+  }
+
+  function renderGarden(pane) {
+    const g = cfg.garden || {};
+    pane.innerHTML = `
+      <h1>Garden</h1>
+      <p class="tab-desc">Everyone running Bloom on this network, and a private line to each of them. Messages and tasks travel straight to the one person you picked — nothing you send is broadcast.</p>
+
+      <div class="card" data-sid="garden-prefs">
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Your name</div><div class="s">How others see you — your machine (<code id="gd-my-machine">…</code>) shows next to it and can't be edited here</div></div>
+          <div class="ctl-input"><input type="text" class="in" id="gd-name" value="${esc(g.name || '')}" placeholder="Name" maxlength="24"></div>
+        </div>
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Your face</div><div class="s">Appears next to your name, and on their notifications</div></div>
+          <div class="ctl-input">
+            <button class="gd-face-btn" id="gd-avatar" title="Choose your face">
+              <span class="gd-face" style="--hue:${gdHue(g.id || '')};width:34px;height:34px;font-size:19px">${esc(g.avatar || '')}</span>
+              <span>Change</span>
+            </button>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Do not disturb</div><div class="s">Messages still arrive and still count as unread — the bud just stops interrupting you</div></div>
+          <div class="ctl-input"><label class="tgl"><input type="checkbox" id="gd-dnd" ${(cfg.notifications || {}).dnd ? 'checked' : ''}><span class="knob"></span></label></div>
+        </div>
+        <div class="ctl-row">
+          <div class="ctl-label"><div class="t">Share your matrix</div><div class="s">Let others open your Eisenhower board and assign into it</div></div>
+          <div class="ctl-input"><label class="tgl"><input type="checkbox" id="gd-public" ${g.public ? 'checked' : ''}><span class="knob"></span></label></div>
+        </div>
+      </div>
+
+      <div class="gd-cols">
+        <div class="gd-col">
+          <h2 class="sec first">People</h2>
+          <div id="gd-peers" class="card gd-list" data-sid="garden-peers" data-search="garden lan peers network chat message"></div>
+        </div>
+        <div class="gd-col">
+          <h2 class="sec first">Task inbox</h2>
+          <div id="gd-inbox" class="card gd-list"></div>
+        </div>
+      </div>
+
+      <div id="gd-main" class="garden-main" style="display:none;"></div>
+    `;
+
+    $('#gd-name', pane).addEventListener('change', async e => {
+      const name = e.target.value.trim();
+      if (!name) { e.target.value = (cfg.garden || {}).name || ''; return; }
+      const id = await bloom.gardenSetName(name);
+      cfg.garden = { ...(cfg.garden || {}), name: id.name };
+      e.target.value = id.name;
+    });
+    $('#gd-public', pane).addEventListener('change', async e => {
+      const id = await bloom.gardenSetPublic(e.target.checked);
+      cfg.garden = { ...(cfg.garden || {}), public: id.public };
+    });
+    $('#gd-avatar', pane).addEventListener('click', () => openAvatarPicker());
+    $('#gd-dnd', pane).addEventListener('change', e => {
+      cfg.notifications = { ...(cfg.notifications || {}), dnd: e.target.checked };
+      patch({ notifications: { dnd: e.target.checked } });
+    });
+
+    bloom.gardenData().then(d => {
+      gd = d;
+      const mach = $('#gd-my-machine', pane);
+      if (mach) mach.textContent = [d.self && d.self.user, d.self && d.self.host].filter(Boolean).join('@') || '—';
+      if (currentTab === 'garden') renderGardenData($('#tab-garden'));
+    });
+    renderGardenData(pane);
+    reportViewing();
+  }
+
+  // ---- people ----
+  function renderPeers(box) {
+    if (!gd.people.length) {
+      box.innerHTML = '<div class="gd-blank">Nobody else on this network yet. Bloom looks again every few seconds.</div>';
+      return;
+    }
+    box.innerHTML = gd.people.map(p => {
+      const queued = gdQueued(p.id);
+      const machine = p.user || p.host ? `${esc([p.user, p.host].filter(Boolean).join('@'))}` : '';
+      const sub = p.online
+        ? [machine, esc(p.ip || '')].filter(Boolean).join(' · ')
+        : [`Offline · last seen ${gdAgo(p.lastSeen)}`, machine].filter(Boolean).join(' · ');
+      return `
+        <div class="gd-peer ${activePeerId === p.id ? 'active' : ''} ${p.online ? '' : 'off'}" data-pid="${esc(p.id)}">
+          <div class="gd-face-wrap">
+            ${gdAvatar(p, 32)}
+            <span class="gd-dot ${p.online ? 'on' : ''}" title="${p.online ? 'Online' : 'Offline'}"></span>
+          </div>
+          <div class="gd-peer-txt">
+            <div class="gd-peer-name">${esc(p.name)}</div>
+            <div class="gd-peer-sub">${sub}</div>
+          </div>
+          ${p.dnd ? `<span class="gd-pill" title="They have notifications muted — your message still arrives">${icon('moon', 11)} busy</span>` : ''}
+          ${p.keyChanged ? `<span class="gd-pill warn" title="Their security key changed">${icon('shield', 11)} key changed</span>` : ''}
+          ${queued ? `<span class="gd-pill" title="${queued} waiting to send">${queued} queued</span>` : ''}
+          ${p.unread ? `<span class="gd-badge">${p.unread > 9 ? '9+' : p.unread}</span>` : ''}
+          ${icon('chevron-right', 14)}
+        </div>`;
+    }).join('');
+
+    $$('.gd-peer', box).forEach(row => row.addEventListener('click', () => openPeer(row.dataset.pid)));
+  }
+
+  function openPeer(pid) {
+    if (!gdPeer(pid)) return;
+    activePeerId = pid;
+    activeGardenView = 'chat';
+    matrixCache = null;
+    bloom.gardenMarkRead(pid);
+    reportViewing();
+    renderGardenData($('#tab-garden'));
+  }
+
+  // ---- task inbox ----
+  function renderInbox(box) {
+    if (!gd.inbox.length) {
+      box.innerHTML = '<div class="gd-blank">No tasks waiting on you.</div>';
+      return;
+    }
+    // Anything the user has already chosen survives the rebuild.
+    const picked = {};
+    $$('.gd-inbox-item', box).forEach(el => {
+      const sel = $('.gd-inbox-q', el);
+      if (el.dataset.tid && sel) picked[el.dataset.tid] = sel.value;
+    });
+    box.innerHTML = gd.inbox.slice().reverse().map(t => `
+      <div class="gd-inbox-item" data-tid="${esc(t.id)}">
+        <div class="gd-inbox-head"><b>${esc(t.fromName)}</b> sent you a task · ${gdAgo(t.ts)}</div>
+        <div class="gd-inbox-title">${esc(t.title)}</div>
+        ${t.desc ? `<div class="gd-inbox-desc">${esc(t.desc)}</div>` : ''}
+        <div class="gd-inbox-q-row">
+          <span class="gd-inbox-q-lbl">They suggested</span>
+          <select class="in gd-inbox-q">
+            ${QUADRANTS.map(q => `<option value="${q.q}" ${(picked[t.id] || t.preferredQ) === q.q ? 'selected' : ''}>${q.title}</option>`).join('')}
+          </select>
+        </div>
+        <div class="gd-inbox-acts">
+          <button class="btn btn-sm btn-primary" data-iaccept>Accept</button>
+          <button class="btn btn-sm" data-ideny>Decline</button>
+        </div>
+      </div>`).join('');
+
+    // Answers carry the entry's own id — the list re-sorts under the user whenever
+    // anything else lands, so a positional index would answer the wrong task.
+    $$('.gd-inbox-item', box).forEach(item => {
+      const tid = item.dataset.tid;
+      const sel = $('.gd-inbox-q', item);
+      $('[data-iaccept]', item).addEventListener('click', async () => {
+        const r = await bloom.gardenAnswerTask(tid, true, sel.value);
+        toast(r.ok ? 'Task added to your matrix' : 'That task is no longer there', { kind: r.ok ? 'ok' : 'bad' });
+      });
+      $('[data-ideny]', item).addEventListener('click', () => bloom.gardenAnswerTask(tid, false, sel.value));
+    });
+  }
+
+  function renderGardenData(pane) {
+    if (!pane) return;
+    const peersBox = $('#gd-peers', pane);
+    if (peersBox) renderPeers(peersBox);
+    const inboxBox = $('#gd-inbox', pane);
+    if (inboxBox) renderInbox(inboxBox);
+
+    const mainBox = $('#gd-main', pane);
+    if (!mainBox) return;
+
+    // A peer going offline used to close the thread out from under you. It stays
+    // open now: history is yours to read whether or not they are still awake.
+    const peer = activePeerId ? gdPeer(activePeerId) : null;
+    if (!peer) {
+      mainBox.dataset.viewType = '';
+      mainBox.innerHTML = '';
+      mainBox.style.display = 'none';
+      return;
+    }
+
+    const targetView = `${peer.id}:${activeGardenView}`;
+    if (mainBox.dataset.viewType !== targetView) {
+      mainBox.dataset.viewType = targetView;
+      mainBox.style.display = 'flex';
+      buildPeerPane(mainBox, peer);
+    }
+    paintPeerHead(mainBox, peer);
+    if (activeGardenView === 'chat') paintChat(mainBox, peer);
+    else paintMatrix(mainBox, peer);
+  }
+
+  function buildPeerPane(mainBox, peer) {
+    mainBox.innerHTML = `
+      <div class="gd-main-head">
+        <div class="gd-head-who">
+          ${gdAvatar(peer, 30)}
+          <div>
+            <div class="gd-main-title">${esc(peer.name)}</div>
+            <div class="gd-main-sub" id="gd-presence"></div>
+          </div>
+        </div>
+        <div class="gd-head-right">
+          <div class="gd-tabs">
+            <button class="gd-tab ${activeGardenView === 'chat' ? 'active' : ''}" data-gview="chat">Chat</button>
+            <button class="gd-tab ${activeGardenView === 'matrix' ? 'active' : ''}" data-gview="matrix">Matrix</button>
+          </div>
+          <button class="icon-btn" id="gd-verify" title="Verify encryption">${icon('shield', 16)}</button>
+          <button class="icon-btn" id="gd-main-close" title="Close">${icon('x', 16)}</button>
+        </div>
+      </div>
+      ${activeGardenView === 'chat' ? `
+        <div class="gd-chat-area">
+          <div class="gd-key-note" id="gd-key-note"></div>
+          <div class="gd-chat-hist" id="gd-chat-hist"></div>
+          <div class="gd-offline-note" id="gd-offline-note"></div>
+          <div class="gd-chat-input-area">
+            <button class="icon-btn danger" id="gd-chat-clear" title="Clear this conversation">${icon('trash', 16)}</button>
+            <input type="text" class="in" id="gd-chat-inp" placeholder="Message ${esc(peer.name)}…" maxlength="2000">
+            <button class="icon-btn" id="gd-chat-send" title="Send" style="color:var(--acc);">${icon('send', 16)}</button>
+          </div>
+        </div>` : `
+        <div class="gd-matrix-area">
+          <div class="gd-matrix-head">
+            <span>${esc(peer.name)}'s board</span>
+            <button class="btn btn-sm" id="gd-matrix-refresh">${icon('refresh', 12)} Refresh</button>
+          </div>
+          <div id="gd-pub-matrix"></div>
+        </div>`}
+    `;
+
+    $$('.gd-tab', mainBox).forEach(b => b.addEventListener('click', () => {
+      activeGardenView = b.dataset.gview;
+      if (activeGardenView === 'matrix') matrixCache = null;
+      reportViewing();
+      renderGardenData($('#tab-garden'));
+    }));
+    $('#gd-verify', mainBox).addEventListener('click', () => openVerify(peer.id));
+    $('#gd-main-close', mainBox).addEventListener('click', () => {
+      activePeerId = null;
+      reportViewing();
+      renderGardenData($('#tab-garden'));
+    });
+
+    if (activeGardenView === 'chat') {
+      const inp = $('#gd-chat-inp', mainBox);
+      const send = async () => {
+        const text = inp.value.trim();
+        if (!text) return;
+        inp.value = '';
+        const r = await bloom.gardenSendMessage(peer.id, text);
+        if (!r.ok) toast('Could not send that message', { kind: 'bad' });
+      };
+      $('#gd-chat-send', mainBox).addEventListener('click', send);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+      $('#gd-chat-clear', mainBox).addEventListener('click', async () => {
+        const yes = await confirmModal('Clear conversation',
+          `Delete your whole message history with ${peer.name}? This only clears your copy.`, 'Clear', true);
+        if (yes) bloom.gardenClearChat(peer.id);
+      });
+      setTimeout(() => inp && inp.focus(), 10);
+    } else {
+      $('#gd-matrix-refresh', mainBox).addEventListener('click', () => { matrixCache = null; paintMatrix(mainBox, peer); });
+    }
+  }
+
+  function paintPeerHead(mainBox, peer) {
+    // Trust on first use: a key that changes is usually a reinstall, but it is also
+    // what an impostor looks like, so it is stated rather than absorbed quietly.
+    const note = $('#gd-key-note', mainBox);
+    if (note) {
+      note.classList.toggle('on', !!peer.keyChanged);
+      note.innerHTML = peer.keyChanged
+        ? `${icon('shield', 13)}<span><b>${esc(peer.name)}'s security key changed.</b> Usually a reinstall — but check the code below matches theirs before you carry on.</span>
+           <button class="btn btn-sm" id="gd-key-ok">Got it</button>`
+        : '';
+      const okBtn = $('#gd-key-ok', note);
+      if (okBtn) okBtn.addEventListener('click', () => bloom.gardenAckKey(peer.id));
+    }
+    const el = $('#gd-presence', mainBox);
+    if (!el) return;
+    const queued = gdQueued(peer.id);
+    // Machine and address together: the name above is theirs to choose, this line
+    // is not. The IP in particular is where the packets actually came from.
+    const machine = [peer.user, peer.host].filter(Boolean).join('@');
+    const bits = peer.online
+      ? [`<span class="gd-dot on inline"></span> Online`, machine && esc(machine), peer.ip && esc(peer.ip)]
+      : [`<span class="gd-dot inline"></span> Offline · last seen ${gdAgo(peer.lastSeen)}`,
+         machine && esc(machine), queued && `${queued} waiting to send`];
+    el.innerHTML = bits.filter(Boolean).join(' · ');
+  }
+
+  const GD_STATUS = { sending: 'Sending…', queued: 'Waiting for them', failed: 'Not delivered', sent: '' };
+
+  function chatLine(m, peer) {
+    if (m.kind === 'accepted' || m.kind === 'denied' || m.kind === 'done') {
+      const who = m.dir === 'in' ? peer.name : 'You';
+      const verb = m.kind === 'accepted' ? 'accepted' : m.kind === 'denied' ? 'declined' : 'finished';
+      const qd = m.q ? QMAP[m.q] : null;
+      return `<div class="gd-sys ${m.kind === 'done' ? 'ok' : ''}">${esc(who)} ${verb} “${esc(m.text)}”${qd ? ` · ${esc(qd.title)}` : ''}</div>`;
+    }
+    const me = m.dir === 'out';
+    const status = me && GD_STATUS[m.status] ? `<span class="gd-status ${m.status}">${GD_STATUS[m.status]}</span>` : '';
+    const tag = m.kind === 'task' ? `<span class="gd-tag">${icon('inbox', 11)} Task</span>` : '';
+    return `
+      <div class="gd-bubble-wrap ${me ? 'me' : 'peer'}">
+        <div class="gd-bubble ${m.kind === 'task' ? 'task' : ''}">${tag}${esc(m.text)}</div>
+        <div class="gd-meta">${gdClock(m.ts)}${status}</div>
+      </div>`;
+  }
+
+  function paintChat(mainBox, peer) {
+    const note = $('#gd-offline-note', mainBox);
+    if (note) {
+      note.innerHTML = peer.online ? '' :
+        `${icon('clock', 12)} ${esc(peer.name)} is offline — anything you send now goes out the moment they're back.`;
+      note.classList.toggle('on', !peer.online);
+    }
+
+    const hist = $('#gd-chat-hist', mainBox);
+    if (!hist) return;
+    const msgs = gdChat(peer.id);
+    // Only follow the tail if the reader is already there; yanking them down while
+    // they scroll back through history is worse than a missed autoscroll.
+    const atBottom = hist.scrollHeight - hist.scrollTop - hist.clientHeight < 60;
+
+    if (!msgs.length) {
+      hist.innerHTML = `<div class="gd-empty-state">No messages yet. Say hello.</div>`;
+      return;
+    }
+    let lastDay = '';
+    hist.innerHTML = msgs.map(m => {
+      const day = gdDay(m.ts);
+      const sep = day !== lastDay ? `<div class="gd-daysep"><span>${day === gdDay(Date.now()) ? 'Today' : esc(day)}</span></div>` : '';
+      lastDay = day;
+      return sep + chatLine(m, peer);
+    }).join('');
+    if (atBottom) hist.scrollTop = hist.scrollHeight;
+  }
+
+  function paintMatrix(mainBox, peer) {
+    const box = $('#gd-pub-matrix', mainBox);
+    if (!box) return;
+
+    if (!matrixCache || matrixCache.peerId !== peer.id) {
+      matrixCache = { peerId: peer.id, state: 'load' };
+      box.innerHTML = '<div class="gd-blank">Loading…</div>';
+      bloom.gardenRequestMatrix(peer.id).then(res => {
+        if (!matrixCache || matrixCache.peerId !== peer.id) return;
+        matrixCache = res.ok
+          ? { peerId: peer.id, state: 'ok', tasks: res.tasks }
+          : { peerId: peer.id, state: 'err', error: res.error };
+        if (currentTab === 'garden' && activePeerId === peer.id && activeGardenView === 'matrix') paintMatrix(mainBox, peer);
+      });
+      return;
+    }
+    if (matrixCache.state === 'load') { box.innerHTML = '<div class="gd-blank">Loading…</div>'; return; }
+    if (matrixCache.state === 'err') {
+      const why = matrixCache.error === 'private' ? `${esc(peer.name)} isn't sharing their matrix.`
+        : matrixCache.error === 'offline' ? `${esc(peer.name)} is offline right now.`
+          : `Couldn't reach ${esc(peer.name)} (${esc(matrixCache.error || 'no answer')}).`;
+      box.innerHTML = `<div class="gd-blank">${why}</div>`;
+      return;
+    }
+
+    const remote = matrixCache.tasks || [];
+    box.innerHTML = `
+      <div class="matrix">
+        ${QUADRANTS.map(qd => {
+          const items = remote.filter(t => t.q === qd.q);
+          return `
+            <section class="quad" style="--q:${qd.color}; box-shadow:none;">
+              <header class="quad-head">
+                <span class="quad-dot"></span>
+                <div style="flex:1"><div class="quad-title">${qd.title}</div><div class="quad-sub">${qd.sub}</div></div>
+                <button class="btn btn-sm qadd-head" data-passign="${qd.q}" style="margin-left:8px;padding:0 6px;" title="Assign a task here" aria-label="Assign to ${qd.title}">${icon('plus', 12)}</button>
+              </header>
+              <div class="quad-body">
+                ${items.length === 0 ? `<div class="quad-empty">No tasks</div>` : items.map(t => `
+                  <div class="tcard ${t.done ? 'done' : ''}" style="cursor:default;" title="${esc(t.text)}">
+                    <div class="tcheck ${t.done ? 'done' : ''}">${t.done ? icon('check', 12) : ''}</div>
+                    <div class="ttext"><div class="ttext-title">${esc(t.text)}</div></div>
+                  </div>`).join('')}
+              </div>
+            </section>`;
+        }).join('')}
+      </div>`;
+    $$('[data-passign]', box).forEach(btn => btn.addEventListener('click', () => openSendTaskInline(peer, btn.dataset.passign)));
+  }
+
+  // Verification is a thing you do once, deliberately — not a code sitting on screen
+  // through every conversation. One code, derived from both keys, so the two people
+  // are comparing the same string rather than reading two each and swapping them.
+  function openVerify(peerId) {
+    const peer = gdPeer(peerId);
+    if (!peer) return;
+    const code = peer.safety || '';
+    const { modal, close } = openModal(`
+      <div class="modal-head"><h2>Verify ${esc(peer.name)}</h2></div>
+      <div class="modal-body">
+        ${code ? `<div class="gd-verify-code">${esc(code)}</div>
+        <p class="hint" style="margin-top:14px;">Open this panel on ${esc(peer.name)}'s machine too. <b>Same code on both screens means nobody is in the middle.</b></p>`
+        : `<p class="hint">No code yet — Bloom has to see ${esc(peer.name)} on the network first.</p>`}
+        ${peer.keyChanged ? `<div class="note warn" style="margin-top:14px;">Their key changed recently, so this code will have changed too. Worth checking before you carry on.</div>` : ''}
+      </div>
+      <div class="modal-foot"><span class="spring"></span>
+        <button class="btn btn-primary" id="vf-close">Done</button>
+      </div>`);
+    $('#vf-close', modal).addEventListener('click', close);
+  }
+
+  // The roster lives in garden.js and is validated there, so the picker asks for it
+  // rather than keeping a second copy that could drift out of step.
+  async function openAvatarPicker() {
+    if (!gdAvatarList.length) gdAvatarList = await bloom.gardenAvatars();
+    const mine = (cfg.garden || {}).avatar;
+    const { modal, close } = openModal(`
+      <div class="modal-head"><h2>Pick your face</h2></div>
+      <div class="modal-body">
+        <p class="hint" style="margin-bottom:14px;">Everyone on the network sees this next to your name.</p>
+        <div class="gd-face-grid">
+          ${gdAvatarList.map(a => `
+            <button class="gd-face-opt ${a === mine ? 'on' : ''}" data-av="${esc(a)}" title="${esc(a)}">${esc(a)}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="modal-foot"><span class="spring"></span>
+        <button class="btn" id="av-close">Done</button>
+      </div>`);
+
+    $$('.gd-face-opt', modal).forEach(b => b.addEventListener('click', async () => {
+      $$('.gd-face-opt', modal).forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      const id = await bloom.gardenSetAvatar(b.dataset.av);
+      cfg.garden = { ...(cfg.garden || {}), avatar: id.avatar };
+      const face = $('#gd-avatar .gd-face', $('#tab-garden'));
+      if (face) face.textContent = id.avatar;
+    }));
+    $('#av-close', modal).addEventListener('click', close);
+  }
+
+  function openSendTaskInline(peer, defaultQ) {
+    const qd = QMAP[defaultQ] || QUADRANTS[0];
+    const { modal, close } = openModal(`
+      <div class="modal-head"><h2>Assign a task to ${esc(peer.name)}</h2></div>
+      <div class="modal-body">
+        <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <span style="background:${qd.color}; width:10px; height:10px; border-radius:50%; display:inline-block;"></span>
+          <span style="font-weight: 500; color: ${qd.color}; font-size: 13px;">${qd.title}</span>
+        </div>
+        <div class="f-field">
+          <label>Task name</label>
+          <input class="in" id="pt-title" maxlength="140" placeholder="What needs doing?">
+        </div>
+        <div class="f-field" style="margin-top: 12px;">
+          <label>Description (optional)</label>
+          <textarea class="in" id="pt-desc" rows="3" style="resize:none;" placeholder="Add details…"></textarea>
+        </div>
+        <p class="hint" style="margin-top:12px;">${esc(peer.name)} decides where it lands — they can accept it into a different quadrant, or decline.</p>
+      </div>
+      <div class="modal-foot"><span class="spring"></span>
+        <button class="btn" id="pt-cancel">Cancel</button>
+        <button class="btn btn-primary" id="pt-ok">Send</button>
+      </div>`);
+
+    const titleInp = $('#pt-title', modal);
+    const descInp = $('#pt-desc', modal);
+    const done = async () => {
+      const title = titleInp.value.trim();
+      if (!title) { titleInp.focus(); return; }
+      close();
+      const r = await bloom.gardenSendTask(peer.id, { title, desc: descInp.value.trim(), preferredQ: defaultQ });
+      toast(r.ok ? (r.queued ? 'Task queued — it sends when they are back' : 'Task sent') : 'Could not send that task',
+        { kind: r.ok ? 'ok' : 'bad' });
+    };
+    $('#pt-cancel', modal).addEventListener('click', close);
+    $('#pt-ok', modal).addEventListener('click', done);
+    titleInp.addEventListener('keydown', e => { if (e.key === 'Enter') done(); });
+  }
+
 
   // ==== PROFILES TAB ====
   // Deliberately excludes `appearance`: the accent is one global setting shared by every
@@ -2540,7 +3114,7 @@
         renderTab('profiles');
         toast(`Switched to "${t.label}"`, { kind: 'ok' });
       }));
-    }).catch(() => {});
+    }).catch(() => { });
 
     $('#profile-new', pane).addEventListener('click', () => promptName('New profile', 'Profile name', '', async name => {
       if (!name || names.includes(name)) { toast(name ? 'That name is taken.' : 'Name required.', { kind: 'bad' }); return; }
@@ -2766,10 +3340,10 @@
       btn.disabled = mode === 'checking' || mode === 'downloading';
       btn.innerHTML =
         mode === 'checking' ? `${icon('refresh', 13)} Checking…`
-        : mode === 'available' ? `${icon('download', 13)} Download v${esc(newVersion)}`
-        : mode === 'downloading' ? `${icon('download', 13)} Downloading…`
-        : mode === 'ready' ? `${icon('check', 13)} Restart &amp; install`
-        : `${icon('refresh', 13)} Check for updates`;
+          : mode === 'available' ? `${icon('download', 13)} Download v${esc(newVersion)}`
+            : mode === 'downloading' ? `${icon('download', 13)} Downloading…`
+              : mode === 'ready' ? `${icon('check', 13)} Restart &amp; install`
+                : `${icon('refresh', 13)} Check for updates`;
     };
     btn.addEventListener('click', () => {
       if (mode === 'idle') { mode = 'checking'; statusEl.textContent = 'Checking for updates…'; paint(); bloom.updateCheck(); }
@@ -2785,7 +3359,7 @@
       const lines = notesToLines(raw);
       $('#rel-title', pane).textContent =
         kind === 'installed' ? `What's in ${version} — the version you're running`
-        : version ? `What's new in ${version}` : "What's new";
+          : version ? `What's new in ${version}` : "What's new";
       $('#rel-details', pane).classList.toggle('is-installed', kind === 'installed');
       const d = date ? new Date(date) : null;
       $('#rel-date', pane).textContent = d && !isNaN(d) ? d.toLocaleDateString() : '';
@@ -2842,20 +3416,38 @@
   // Coach marks over the real chrome: each step switches to the tab it's describing,
   // so the panel behind the spotlight is the thing being talked about.
   const TOUR = [
-    { sel: '#rail [data-tab="actions"]', tab: 'actions', icon: 'grid', h: 'Everything in your dial lives here',
-      p: 'This list <b>is</b> the ring. Add actions, drag to reorder, and drop one onto another to make a folder.' },
-    { sel: '#rail [data-tab="appearance"]', tab: 'appearance', icon: 'eye', h: 'Shape and colour',
-      p: 'Node size, ring radius, spacing and your accent — the preview on the right updates as you drag.' },
-    { sel: '#rail [data-tab="hotkeys"]', tab: 'hotkeys', icon: 'keyboard', h: 'Keys and gestures',
-      p: 'Rebind the global hotkeys and give a single action its own shortcut. <b>Double-tap the bud</b> to dictate, <b>hold it</b> to read your selection aloud.' },
-    { sel: '#rail [data-tab="focus"]', tab: 'focus', icon: 'target', h: 'Focus timer and task matrix',
-      p: 'Start a pomodoro and it draws itself as a ring around the bud — <b>hover the bud</b> for the time left. Below it, sort what matters into the four quadrants.' },
-    { sel: '#rail [data-tab="profiles"]', tab: 'profiles', icon: 'clipboard', h: 'Whole setups, swapped in one click',
-      p: 'A profile bundles your actions and pins. Keep one for work and one for everything else, or start again from a template.' },
-    { sel: '#rail [data-tab="about"]', tab: 'about', icon: 'bloom', h: 'Updates, with the changelog',
-      p: 'Check for a new version here — when one exists, what changed in it is listed right under the button.' },
-    { sel: '#global-search-wrap', tab: null, icon: 'search', h: 'And when you forget where something is',
-      p: 'Search every setting and every action from here. That is the whole tour — the bud is waiting for you.' }
+    {
+      sel: '#rail [data-tab="actions"]', tab: 'actions', icon: 'grid', h: 'Everything in your dial lives here',
+      p: 'This list <b>is</b> the ring. Add actions, drag to reorder, and drop one onto another to make a folder.'
+    },
+    {
+      sel: '#rail [data-tab="appearance"]', tab: 'appearance', icon: 'eye', h: 'Shape and colour',
+      p: 'Node size, ring radius, spacing and your accent — the preview on the right updates as you drag.'
+    },
+    {
+      sel: '#rail [data-tab="hotkeys"]', tab: 'hotkeys', icon: 'keyboard', h: 'Keys and gestures',
+      p: 'Rebind the global hotkeys and give a single action its own shortcut. <b>Double-tap the bud</b> to dictate, <b>hold it</b> to read your selection aloud.'
+    },
+    {
+      sel: '#rail [data-tab="focus"]', tab: 'focus', icon: 'target', h: 'Focus timer and task matrix',
+      p: 'Start a pomodoro and it draws itself as a ring around the bud — <b>hover the bud</b> for the time left. Below it, sort what matters into the four quadrants.'
+    },
+    {
+      sel: '#rail [data-tab="garden"]', tab: 'garden', icon: 'users', h: 'The people on your network',
+      p: 'Everyone running Bloom nearby appears here — chat, look at what they are working on, and hand them a task they can accept or decline. Every message is <b>end-to-end encrypted</b> and goes to that one person alone.'
+    },
+    {
+      sel: '#rail [data-tab="profiles"]', tab: 'profiles', icon: 'clipboard', h: 'Whole setups, swapped in one click',
+      p: 'A profile bundles your actions and pins. Keep one for work and one for everything else, or start again from a template.'
+    },
+    {
+      sel: '#rail [data-tab="about"]', tab: 'about', icon: 'bloom', h: 'Updates, with the changelog',
+      p: 'Check for a new version here — when one exists, what changed in it is listed right under the button.'
+    },
+    {
+      sel: '#global-search-wrap', tab: null, icon: 'search', h: 'And when you forget where something is',
+      p: 'Search every setting and every action from here. That is the whole tour — the bud is waiting for you.'
+    }
   ];
 
   function startTour() {
@@ -2878,8 +3470,8 @@
           ${last ? '' : '<button class="btn btn-sm" data-t="skip">Skip</button>'}
           ${i ? '<button class="btn btn-sm" data-t="back">Back</button>' : ''}
           ${last
-            ? '<button class="btn btn-sm btn-primary" data-t="skip">Close</button>'
-            : '<button class="btn btn-sm btn-primary" data-t="next">Next</button>'}
+          ? '<button class="btn btn-sm btn-primary" data-t="skip">Close</button>'
+          : '<button class="btn btn-sm btn-primary" data-t="next">Next</button>'}
         </div>`;
       $$('[data-t]', pop).forEach(b => b.addEventListener('click', () => {
         const a = b.dataset.t;
@@ -2939,19 +3531,51 @@
 
     bloom.on('config-changed', c => {
       cfg = c;
-      applyAccent(cfg.appearance.accentA); // keep chrome accent in sync (e.g. profile switch)
+      applyAccent(cfg.appearance.accentA); // keep chrome accent in sync
       if (Date.now() - selfPatchAt < 500) return; // our own write; UI already updated
-      rerenderCurrent();
+      
+      // Garden state arrives on its own channel now, so a config change here is
+      // about everything *except* conversations — rebuilding the tab would only
+      // throw away the message the user is halfway through typing.
+      if (currentTab !== 'garden') rerenderCurrent();
     });
     bloom.on('settings-tab', t => switchTab(t));
     bloom.on('hotkey-status', f => { hotkeyFailures = f || {}; paintHotkeyFailures(); });
     bloom.on('settings-cmd', c => {
       if (c === 'new-preset') { switchTab('focus'); customPresetModal(); }
       else if (c === 'tasks') { switchTab('focus'); const el = $('[data-sid="matrix"]'); if (el) flashControl(el); }
+      else if (typeof c === 'string' && c.startsWith('garden-peer:')) {
+        const pid = c.slice('garden-peer:'.length);
+        switchTab('garden');
+        bloom.gardenData().then(d => {
+          gd = d;
+          if (gdPeer(pid)) openPeer(pid);
+          else renderGardenData($('#tab-garden'));
+        });
+      }
+    });
+    bloom.on('garden-peers', peers => {
+      gd.people = peers;
+      if (currentTab === 'garden') renderGardenData($('#tab-garden'));
+    });
+    // One partial update per change, not the whole config: only the slices main
+    // actually touched come through, and only the garden tab repaints.
+    bloom.on('garden-data', d => {
+      if (d.people) gd.people = d.people;
+      if (d.chats) gd.chats = d.chats;
+      if (d.unread) gd.unread = d.unread;
+      if (d.inbox) gd.inbox = d.inbox;
+      if (d.outbox) gd.outbox = d.outbox;
+      // Whatever thread is open on screen counts as read the moment it lands.
+      if (currentTab === 'garden' && activePeerId && activeGardenView === 'chat' && gd.unread[activePeerId]) {
+        bloom.gardenMarkRead(activePeerId);
+      }
+      if (currentTab === 'garden') renderGardenData($('#tab-garden'));
     });
     bloom.on('focus-status', s => {
       lastFocus = s;
       if (currentTab === 'focus' && focusLiveHandler && $('#focus-live')) focusLiveHandler(s);
+      syncRunningCard(s);
     });
     bloom.on('update-status', s => {
       lastUpdateStatus = s;
@@ -3215,7 +3839,7 @@
       }
       for (const node of m.removedNodes) {
         if (node.nodeType === 1 && (node.classList?.contains('bloom-select') ||
-            (node.querySelectorAll && node.querySelectorAll('.bloom-select').length))) {
+          (node.querySelectorAll && node.querySelectorAll('.bloom-select').length))) {
           removed = true;
         }
       }

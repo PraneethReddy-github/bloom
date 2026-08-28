@@ -22,12 +22,12 @@
   --ok: #43c98a;
   --warn: #d8a72a;
 
-  --r-card: 11px;
-  --r-ctl: 8px;
-  --r-btn: 8px;
+  --r-card: 14px;
+  --r-ctl: 10px;
+  --r-btn: 10px;
 
-  --t: 130ms ease;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --t: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,7 +39,8 @@ body {
 }
 input, textarea, select, button { font: inherit; color: inherit; }
 input, textarea { user-select: text; }
-button { cursor: pointer; background: none; border: none; }
+button { cursor: pointer; background: none; border: none; transition: transform 0.1s ease; }
+button:active { transform: scale(0.96); }
 [hidden] { display: none !important; }
 
 ::-webkit-scrollbar { width: 11px; height: 11px; }
@@ -58,7 +59,11 @@ button { cursor: pointer; background: none; border: none; }
   display: grid; grid-template-columns: 1fr minmax(280px, 460px) 1fr; align-items: center;
   padding: 0 8px 0 16px; gap: 16px;
   border-bottom: 1px solid var(--line);
+  background: rgba(11, 11, 12, 0.75);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   -webkit-app-region: drag;
+  position: relative;
+  z-index: 50;
 }
 #topbar .btn, #topbar input, #topbar .gs-results, .win-controls { -webkit-app-region: no-drag; }
 .topbar-brand { display: flex; align-items: center; gap: 10px; justify-self: start; }
@@ -131,9 +136,11 @@ button { cursor: pointer; background: none; border: none; }
 /* ---- shell ---- */
 #shell { flex: 1; display: flex; min-height: 0; }
 #rail {
-  flex: 0 0 216px; width: 216px; padding: 12px 10px;
+  flex: 0 0 216px; width: 216px; padding: 16px 12px;
   border-right: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: 2px;
+  background: rgba(11, 11, 12, 0.4);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  display: flex; flex-direction: column; gap: 4px;
 }
 .rail-item {
   display: flex; align-items: center; gap: 11px;
@@ -161,8 +168,16 @@ h2.sec.first { margin-top: 6px; }
 h2.sec .tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 9.5px; letter-spacing: 0.04em; color: var(--acc); border: 1px solid var(--acc); background: var(--acc-weak); }
 
 /* ---- cards & rows ---- */
-.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); padding: 2px 18px; }
-.card + .card { margin-top: 14px; }
+.card { 
+  background: var(--card); border: 1px solid var(--line); 
+  border-radius: var(--r-card); padding: 6px 20px; 
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  transition: border-color var(--t), box-shadow var(--t), transform var(--t);
+}
+.card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.card + .card { margin-top: 16px; }
 
 .ctl-row {
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -321,15 +336,17 @@ select:not(.bloom-upgraded) {
 .tgl { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
 .tgl input { position: absolute; opacity: 0; width: 0; height: 0; }
 .tgl .knob {
-  display: inline-block; width: 34px; height: 20px; border-radius: 999px;
+  display: inline-block; width: 36px; height: 22px; border-radius: 999px;
   background: var(--elev-hi); border: 1px solid var(--line-strong); position: relative;
-  transition: background var(--t), border-color var(--t);
+  transition: background var(--t), border-color var(--t), box-shadow var(--t);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 .tgl .knob::after {
-  content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px;
+  content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px;
   border-radius: 50%; background: var(--ink-dim); transition: transform var(--t), background var(--t);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
-.tgl input:checked + .knob { background: var(--acc); border-color: var(--acc); }
+.tgl input:checked + .knob { background: var(--acc); border-color: var(--acc); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 8px var(--acc-weak); }
 .tgl input:checked + .knob::after { transform: translateX(14px); background: var(--acc-ink); }
 .tgl input:focus-visible + .knob { outline: 2px solid var(--line-strong); outline-offset: 2px; }
 
@@ -537,6 +554,7 @@ select:not(.bloom-upgraded) {
 
 .form-grid { display: flex; flex-direction: column; gap: 14px; }
 .f-field { display: flex; flex-direction: column; gap: 6px; }
+.f-field + .f-field { margin-top: 16px; }
 .f-field > label { font-size: 12.5px; color: var(--ink-dim); }
 .f-inline { display: flex; align-items: center; gap: 10px; }
 .f-inline .in { flex: 1; }
@@ -607,16 +625,31 @@ select:not(.bloom-upgraded) {
 .toast .undo-btn:hover { text-decoration: underline; }
 
 /* ---- two-up form row (wizard + modals) ---- */
-.f-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* ---- focus layout ---- */
+.focus-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.focus-section-controls > h2.sec:first-child {
+  margin-top: 8px;
+}
 
 /* ---- focus timer ---- */
 .fl-idle, .fl-run { display: flex; align-items: center; gap: 16px; padding: 16px 0; flex-wrap: wrap; }
+/* Faint and dashed: the same ring the running state fills in, so the card keeps
+   its shape when a block starts. */
+.fl-ring.dim { opacity: 0.7; }
 .fl-copy .t { font-size: 13.5px; }
 .fl-copy .s { font-size: 12.5px; color: var(--ink-dim); margin-top: 3px; }
 .fl-time { font-size: 30px; font-weight: 680; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .fl-ring { flex: 0 0 auto; }
 .fl-ring circle { transition: stroke-dashoffset 1s linear, stroke 0.3s ease; }
 .fl-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+@media (max-width: 1180px) {
+  .fl-idle, .fl-run { gap: 12px 16px; }
+  .fl-presets { margin-left: 0; width: 100%; }
+}
 /* second row under a running timer: swap to a different block without stopping first */
 .fl-swap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 0 2px; border-top: 1px solid var(--line); }
 .fl-swap .s { font-size: 12.5px; color: var(--ink-dim); }
@@ -627,18 +660,23 @@ select:not(.bloom-upgraded) {
   font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums;
   transition: background var(--t), border-color var(--t);
 }
-.fl-chip:hover { background: var(--elev-hi); border-color: var(--acc); }
+.fl-chip:hover { background: var(--elev-hi); border-color: var(--acc); transform: translateY(-1px); }
+.fl-chip { transition: background var(--t), border-color var(--t), transform 0.12s ease; }
 .fl-chip .ic { color: var(--acc); }
 .fl-chip .sep { color: var(--ink-faint); font-weight: 400; }
 .fl-chip.ghost { background: transparent; color: var(--ink-dim); }
 .fl-chip.ghost:hover { color: var(--ink); }
 
 /* ---- eisenhower matrix ---- */
-.matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.matrix { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: 1fr; gap: 14px; align-items: stretch; }
 .quad {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card);
-  display: flex; flex-direction: column; min-height: 210px;
-  transition: border-color var(--t), background var(--t);
+  display: flex; flex-direction: column; min-height: 232px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: border-color var(--t), background var(--t), box-shadow var(--t);
+}
+.quad:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 .quad.over { border-color: var(--q); background: color-mix(in srgb, var(--q) 7%, var(--card)); }
 .quad-head { display: flex; align-items: center; gap: 10px; padding: 13px 15px 11px; border-bottom: 1px solid var(--line); }
@@ -646,8 +684,12 @@ select:not(.bloom-upgraded) {
 .quad-title { font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
 .quad-sub { font-size: 11.5px; color: var(--ink-faint); margin-top: 1px; }
 .quad-count { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
-.quad-body { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 260px; }
-.quad-empty { font-size: 12.5px; color: var(--ink-faint); padding: 10px 7px; }
+.quad-body {
+  flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+  max-height: 240px;   /* 5 cards: 5*40 + 4*6 gap + 16 padding */
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.quad-empty { font-size: 12.5px; color: var(--ink-faint); padding: 10px 7px; margin: auto 0; }
 .quad-add { display: flex; align-items: center; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
 .quad-add .ic { color: var(--ink-faint); flex: 0 0 auto; }
 .qin {
@@ -661,11 +703,20 @@ select:not(.bloom-upgraded) {
 
 .tcard {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 9px; border-radius: 8px;
+  height: 40px; flex: 0 0 auto;
+  padding: 0 11px; border-radius: var(--r-ctl);
   background: var(--elev); border: 1px solid transparent;
-  cursor: grab; transition: background var(--t), border-color var(--t), opacity var(--t);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  cursor: grab; transition: background var(--t), border-color var(--t), box-shadow var(--t), transform 0.15s ease;
 }
-.tcard:hover { background: var(--elev-hi); border-color: var(--line); }
+.tcard:hover { 
+  background: var(--elev-hi); border-color: var(--line-strong); 
+  box-shadow: 0 4px 10px rgba(0,0,0,0.35); 
+  transform: translateY(-1px); 
+}
+.tcard:active {
+  transform: scale(0.98);
+}
 .tcard.dragging { opacity: 0.4; cursor: grabbing; }
 .tcard.done .ttext { text-decoration: line-through; color: var(--ink-faint); }
 .tcheck {
@@ -675,7 +726,32 @@ select:not(.bloom-upgraded) {
 }
 .tcheck:hover { border-color: var(--acc); }
 .tcard.done .tcheck { background: var(--acc); border-color: var(--acc); }
-.ttext { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; cursor: text; }
+.ttext { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; cursor: text; }
+.ttext-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Truncation hides a description completely, so say one exists. */
+.tnote { display: flex; color: var(--ink-faint); opacity: 0.6; padding: 2px; }
+.tfrom { display: flex; color: var(--ink-faint); opacity: 0.6; padding: 2px; }
+.tcard:hover .tfrom { opacity: 0.9; }
+
+/* Starting work is the main thing you do to a card, so it does not hide until hover
+   like the secondary actions do. */
+.tcard .ticon.tplay { opacity: 0.8; }
+.tcard:hover .ticon.tplay { opacity: 1; }
+.tcard .ticon.tplay:hover { color: var(--acc); }
+
+/* The card being worked on is lit and counts down in place, so the board itself
+   tells you where you are without looking up at the timer. */
+.tcard.running {
+  border-color: var(--acc);
+  background: var(--acc-weak);
+  box-shadow: 0 0 0 1px var(--acc-weak), 0 4px 12px rgba(0,0,0,0.3);
+}
+.trun {
+  font-size: 11.5px; font-weight: 650; color: var(--acc);
+  font-variant-numeric: tabular-nums; padding: 0 2px;
+}
+.tcard.running .ticon.tplay { display: none; }
+.tcard:hover .tnote { opacity: 0.9; }
 .ttext-edit { flex: 1; background: var(--bg); border: 1px solid var(--acc); border-radius: 6px; padding: 3px 6px; }
 .ticon { flex: 0 0 auto; color: var(--ink-faint); opacity: 0; padding: 2px; border-radius: 5px; transition: opacity var(--t), color var(--t); }
 .tcard:hover .ticon, .ticon:focus-visible { opacity: 1; }
@@ -776,9 +852,231 @@ select:not(.bloom-upgraded) {
 .tour-step { font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .tour-foot .spring { flex: 1; }
 
+/* ---- garden (lan collaboration) ---- */
+.gd-cols { display: flex; gap: 20px; margin-top: 24px; align-items: flex-start; }
+.gd-col { flex: 1; min-width: 0; }
+.gd-list { padding: 6px; max-height: 268px; overflow-y: auto; }
+.gd-blank { padding: 14px 10px; font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; }
+
+.garden-main {
+  margin-top: 24px;
+  height: 440px;
+  min-width: 0;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  display: flex; flex-direction: column;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+/* ---- people list ---- */
+.gd-peer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 9px; cursor: pointer;
+  transition: background var(--t);
+  border: 1px solid transparent;
+}
+.gd-peer:hover { background: var(--sel); }
+.gd-peer.active { background: var(--sel-hi); border-color: var(--line); }
+.gd-peer.off .gd-face { filter: saturate(0.35); opacity: 0.75; }
+.gd-peer-txt { flex: 1; min-width: 0; }
+.gd-peer-name {
+  font-size: 13.5px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gd-peer-sub {
+  font-size: 11.5px; color: var(--ink-dim); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Colour keyed off the peer id, so the same person is the same colour on every
+   machine and in the bud's notification cards too. */
+.gd-face {
+  flex: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  /* Emoji carry their own colour, so the disc is only a backdrop — but it stays
+     keyed to the peer id, which is what separates two people who picked the same
+     animal. */
+  line-height: 1;
+  background: linear-gradient(145deg, hsl(var(--hue), 46%, 32%), hsl(var(--hue), 40%, 21%));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.gd-face-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 12px 4px 4px; border-radius: 22px;
+  border: 1px solid var(--line); background: var(--elev);
+  font-size: 12.5px; color: var(--ink-dim);
+  transition: background var(--t), color var(--t);
+}
+.gd-face-btn:hover { background: var(--elev-hi); color: var(--ink); }
+
+.gd-face-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+}
+.gd-face-opt {
+  aspect-ratio: 1; border-radius: 12px; font-size: 24px; line-height: 1;
+  border: 1px solid var(--line); background: var(--elev);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t), border-color var(--t), transform var(--t);
+}
+.gd-face-opt:hover { background: var(--elev-hi); transform: translateY(-1px); }
+.gd-face-opt.on { border-color: var(--acc); background: var(--acc-weak); box-shadow: inset 0 0 0 1px var(--acc); }
+.gd-face-wrap { position: relative; flex: none; }
+.gd-dot {
+  position: absolute; right: -1px; bottom: -1px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--ink-faint);
+  box-shadow: 0 0 0 2px var(--card);
+}
+.gd-dot.on { background: #34D399; }
+.gd-dot.inline {
+  position: static; display: inline-block;
+  box-shadow: none; margin-right: 5px; vertical-align: baseline;
+  width: 7px; height: 7px;
+}
+
+.gd-badge {
+  flex: none; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--acc); color: var(--acc-ink);
+  font-size: 10.5px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.gd-pill {
+  flex: none; padding: 2px 7px; border-radius: 8px;
+  background: var(--elev-hi); border: 1px solid var(--line);
+  font-size: 10.5px; color: var(--ink-dim); white-space: nowrap;
+}
+
+/* ---- conversation ---- */
+.gd-main-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.02);
+}
+.gd-head-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.gd-head-right { display: flex; align-items: center; gap: 8px; }
+.gd-main-title { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.gd-main-sub { font-size: 11.5px; color: var(--ink-dim); margin-top: 1px; }
+
+.gd-tabs { display: flex; gap: 4px; background: var(--elev); padding: 3px; border-radius: 8px; border: 1px solid var(--line); }
+.gd-tab { padding: 4px 12px; font-size: 12px; font-weight: 500; color: var(--ink-dim); border-radius: 6px; transition: background var(--t), color var(--t); }
+.gd-tab:hover { color: var(--ink); }
+.gd-tab.active { background: var(--acc-weak); color: var(--ink); box-shadow: inset 0 0 0 1px var(--acc); }
+
+.gd-chat-area { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.gd-chat-hist { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.gd-daysep { display: flex; align-items: center; justify-content: center; margin: 6px 0 2px; }
+.gd-daysep span {
+  font-size: 10.5px; color: var(--ink-faint); letter-spacing: 0.3px;
+  background: var(--elev); border: 1px solid var(--line);
+  padding: 2px 10px; border-radius: 10px;
+}
+/* Task answers are events, not speech — a centred line reads as history rather
+   than as something either side said. */
+.gd-sys.ok { color: var(--ok); }
+.gd-sys {
+  align-self: center; text-align: center; max-width: 80%;
+  font-size: 11.5px; color: var(--ink-faint); line-height: 1.45;
+  padding: 2px 4px;
+}
+
+.gd-bubble-wrap { display: flex; flex-direction: column; max-width: 78%; }
+.gd-bubble-wrap.me { align-self: flex-end; align-items: flex-end; }
+.gd-bubble-wrap.peer { align-self: flex-start; align-items: flex-start; }
+.gd-bubble {
+  padding: 9px 13px; font-size: 13px; line-height: 1.45;
+  border-radius: 16px; overflow-wrap: anywhere; white-space: pre-wrap;
+}
+.gd-bubble-wrap.me .gd-bubble { background: var(--acc); color: var(--acc-ink); border-bottom-right-radius: 4px; }
+.gd-bubble-wrap.peer .gd-bubble { background: var(--elev-hi); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.gd-bubble.task { border-left: 3px solid var(--acc); }
+.gd-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  opacity: 0.75; margin-right: 7px;
+}
+.gd-meta {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10.5px; color: var(--ink-faint); margin-top: 3px; padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.gd-status.queued { color: var(--warn); }
+.gd-status.failed { color: var(--danger); }
+.gd-status.sending { opacity: 0.7; }
+
+/* Standing explanation of why a message will not go out this second. It replaces
+   the old "Failed to send" toast, which said nothing about what happens next. */
+.gd-fp.hidden { letter-spacing: 1px; color: var(--ink-faint); }
+
+/* Big enough to read off a screen from an arm's length away, which is the whole job. */
+.gd-verify-code {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 19px; letter-spacing: 2px; text-align: center; color: var(--ink);
+  padding: 18px 12px; border-radius: var(--r-card);
+  background: var(--elev); border: 1px solid var(--line-strong);
+  user-select: all;
+}
+
+.gd-fp {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 11.5px; letter-spacing: 0.4px; color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+/* Stated, not buried: a key that moved is the one thing a person needs to look at
+   before they keep talking. */
+.gd-key-note {
+  display: none;
+  align-items: center; gap: 8px;
+  padding: 9px 16px; font-size: 11.5px; line-height: 1.45; color: var(--ink);
+  border-bottom: 1px solid var(--line); background: rgba(229,72,77,0.10);
+}
+.gd-key-note.on { display: flex; }
+.gd-key-note .ic { color: var(--danger); flex: none; }
+.gd-key-note span { flex: 1; }
+.gd-key-note .btn { flex: none; }
+
+.gd-pill.warn { color: var(--warn); border-color: rgba(216,167,42,0.4); background: rgba(216,167,42,0.10); display: inline-flex; align-items: center; gap: 4px; }
+
+.gd-offline-note {
+  display: none;
+  align-items: center; gap: 6px;
+  padding: 8px 16px; font-size: 11.5px; color: var(--ink-dim);
+  border-top: 1px solid var(--line); background: rgba(216,167,42,0.07);
+}
+.gd-offline-note.on { display: flex; }
+
+.gd-chat-input-area {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-top: 1px solid var(--line);
+  background: rgba(255,255,255,0.01);
+}
+.gd-chat-input-area .in { flex: 1; border-radius: 20px; padding: 8px 16px; height: 36px; }
+
+.gd-matrix-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; min-height: 0; }
+.gd-matrix-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: var(--ink-dim); margin-bottom: 14px;
+}
+.gd-empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--ink-dim); font-size: 13.5px; }
+
+/* ---- task inbox ---- */
+.gd-inbox-item {
+  padding: 12px; background: var(--elev); border: 1px solid var(--line);
+  border-radius: 9px; margin-bottom: 8px;
+}
+.gd-inbox-item:last-child { margin-bottom: 0; }
+.gd-inbox-head { font-size: 12px; color: var(--ink-dim); }
+.gd-inbox-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 4px; line-height: 1.35; }
+.gd-inbox-desc { font-size: 12px; color: var(--ink-dim); margin-top: 3px; line-height: 1.45; }
+.gd-inbox-q-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.gd-inbox-q-lbl { font-size: 11.5px; color: var(--ink-faint); flex: none; }
+.gd-inbox-q { flex: 1; height: 28px; font-size: 12px; }
+.gd-inbox-acts { display: flex; gap: 8px; margin-top: 10px; }
+.gd-inbox-acts .btn { flex: 1; }
+
 /* ---- responsive ---- */
-/* Below this the two-column appearance layout squeezes slider labels into
-   three-line wraps — stack it instead and give the rows the full width. */
 @media (max-width: 1100px) {
   .appearance-cols { flex-direction: column-reverse; gap: 20px; }
   .preview-stick { position: static; flex: none; width: 100%; display: flex; flex-direction: column; align-items: center; }

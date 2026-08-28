@@ -6,10 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloom — One bloom away.</title>
   <meta name="description"
-    content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — plus offline Whisper dictation, native read-aloud, a pomodoro ring around the bud and an Eisenhower task board. Windows &amp; Linux. MIT." />
+    content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — plus local Whisper dictation, native read-aloud, a pomodoro ring around the bud, an Eisenhower task board, and a Garden that finds everyone running Bloom on your network for encrypted one-to-one messages and shared tasks. Windows &amp; Linux. MIT." />
   <meta property="og:title" content="Bloom — One bloom away." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bloom-dial.web.app/" />
   <meta property="og:description"
-    content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Local voice AI, a focus timer and a task matrix included." />
+    content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Local voice, a focus timer, a task matrix, and a LAN garden of the people around you — end-to-end encrypted." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Bloom — One bloom away." />
+  <meta name="twitter:description"
+    content="A dial of everything you use, one click from anywhere. Local voice, a focus ring, a task board, and encrypted messaging with whoever else is on your network." />
   <meta name="theme-color" content="#08080a" />
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='228' fill='%2308080a'/%3E%3Cg fill='none' stroke='%23f1ede6' stroke-width='30'%3E%3Ccircle cx='512' cy='386.1' r='140.3'/%3E%3Ccircle cx='633.7' cy='474.55' r='140.3'/%3E%3Ccircle cx='587.34' cy='617.9' r='140.3'/%3E%3Ccircle cx='436.67' cy='617.9' r='140.3'/%3E%3Ccircle cx='390.31' cy='474.55' r='140.3'/%3E%3C/g%3E%3C/svg%3E" />
@@ -41,7 +47,9 @@
         <a href="#voice">Voice</a>
         <a href="#actions">Actions</a>
         <a href="#focus">Focus</a>
+        <a href="#garden">Garden</a>
         <a href="#keys">Hotkeys</a>
+        <a href="#settings">Settings</a>
         <a href="#download">Download</a>
       </nav>
       <div class="nav-cta">
@@ -66,6 +74,7 @@
     <a href="#voice">Voice</a>
     <a href="#actions">Actions</a>
     <a href="#focus">Focus &amp; tasks</a>
+    <a href="#garden">Garden</a>
     <a href="#keys">Hotkeys</a>
     <a href="#settings">Settings</a>
     <a href="#download">Download</a>
@@ -101,8 +110,8 @@
           </div>
 
           <ul class="hero-facts">
-            <li><strong>11</strong><span>action types</span></li>
-            <li><strong>17</strong><span>system toggles built in</span></li>
+            <li><strong>12</strong><span>action types</span></li>
+            <li><strong>16</strong><span>system toggles built in</span></li>
             <li><strong>1</strong><span>bud, infinite possibilities</span></li>
           </ul>
         </div>
@@ -127,12 +136,12 @@
         <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
         <span>Open File</span><i>✿</i><span>Custom
           Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i><span>Focus
-          Timer</span><i>✿</i>
+          Timer</span><i>✿</i><span>Bloom</span><i>✿</i><span>Garden</span><i>✿</i>
         <span>Launch App</span><i>✿</i><span>Open URL</span><i>✿</i><span>Terminal Profile</span><i>✿</i>
         <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
         <span>Open File</span><i>✿</i><span>Custom
           Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i><span>Focus
-          Timer</span><i>✿</i>
+          Timer</span><i>✿</i><span>Bloom</span><i>✿</i><span>Garden</span><i>✿</i>
       </div>
     </div>
 
@@ -140,7 +149,7 @@
     <section class="section" id="bud">
       <div class="head reveal">
         <p class="kicker">01 — The bud</p>
-        <h2>Eight gestures. <em>One target.</em></h2>
+        <h2>Nine gestures. <em>One target.</em></h2>
         <p class="lede">Everything Bloom does starts at a 44&nbsp;pixel bud that floats above your
           windows at 85% opacity. It never steals focus, and it stays exactly where you put it.</p>
       </div>
@@ -172,11 +181,16 @@
         </article>
         <article class="g-card" data-tilt><span class="g-tag">Right-click</span>
           <h3>Quick menu</h3>
-          <p>Edit Actions · Settings · Pin position · Hide · Quit. No hunting through a preferences maze.</p>
+          <p>Edit Actions · Settings · Pin position · Do Not Disturb · Quit. No hunting through a preferences maze.</p>
         </article>
         <article class="g-card" data-tilt><span class="g-tag">Drop a file</span>
           <h3>Three-node ring</h3>
           <p>Drag any file onto the bud: Open · Open containing folder · Copy path.</p>
+        </article>
+        <article class="g-card wide" data-tilt><span class="g-tag">Rest on it</span>
+          <h3>Read what's waiting</h3>
+          <p>Let the cursor settle and anything unread opens under the bud. Moving away is what marks it read —
+            grabbing the bud or clicking it open never counts.</p>
         </article>
       </div>
     </section>
@@ -243,7 +257,8 @@
             <div class="key" data-k="Enter"><kbd>Enter</kbd><span>select</span></div>
             <div class="key" data-k="Escape"><kbd>Esc</kbd><span>close</span></div>
             <div class="key" data-k="Home"><kbd>Home</kbd><span>jump to root</span></div>
-            <div class="key" data-k="Digit"><kbd>0–9</kbd><span>jump to slot</span></div>
+            <div class="key" data-k="Digit"><kbd>1–9</kbd><span>jump to slot</span></div>
+            <div class="key" data-k="?"><kbd>?</kbd><span>cheat sheet</span></div>
           </div>
         </div>
       </div>
@@ -253,9 +268,10 @@
     <section class="section" id="voice">
       <div class="head reveal">
         <p class="kicker">03 — Voice, entirely local</p>
-        <h2>Speak it. Read it. <em>No internet.</em></h2>
-        <p class="lede">The Whisper model ships inside the installer and runs on your CPU. Nothing is
-          uploaded, no key to paste, no account to make. Works on a plane.</p>
+        <h2>Speak it. Read it. <em>On your own machine.</em></h2>
+        <p class="lede">The Whisper model downloads once, then lives next to your config and runs on your CPU.
+          Nothing you say is ever uploaded, there is no key to paste and no account to make. After that first
+          fetch it works on a plane.</p>
       </div>
 
       <div class="voice-grid reveal">
@@ -263,8 +279,9 @@
           <div class="v-top"><span class="v-badge">Speech → Text</span><span
               class="v-hot"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>D</kbd></span></div>
           <h3>Voice dictation</h3>
-          <p>Bloom captures your mic, transcribes with an embedded <code>Xenova/whisper-base.en</code>
-            model, and types the result straight at your cursor — any app, any text field.</p>
+          <p>Bloom captures your mic, transcribes locally with <code>Xenova/whisper-base.en</code> — or the
+            tiny or small model, your pick — and types the result straight at your cursor: any app, any text
+            field.</p>
           <div class="wave" id="voiceWave" aria-hidden="true"></div>
           <ul class="v-list">
             <li>Long-form safe — 30s chunks with 5s stride, so a two-minute ramble transcribes whole</li>
@@ -299,7 +316,7 @@
       <div class="head reveal">
         <p class="kicker">04 — Action catalog</p>
         <h2>If it can be triggered, <em>Bloom can bloom it.</em></h2>
-        <p class="lede">Every node in the tree is either a folder or one of these eleven. Each one reports
+        <p class="lede">Every node in the tree is either a folder or one of these twelve. Each one reports
           back with a toast.</p>
       </div>
 
@@ -314,11 +331,12 @@
         </article>
         <article class="act" data-tilt><span class="act-n">03</span>
           <h3>Terminal Profile</h3>
-          <p>Working directory plus an auto-run command. gnome-terminal, konsole, xfce4-terminal, or your default.</p>
+          <p>Working directory plus an auto-run command. gnome-terminal, konsole, alacritty, kitty, xterm, Windows Terminal,
+            PowerShell — or your default. Flag one to run elevated and it asks every time.</p>
         </article>
         <article class="act" data-tilt><span class="act-n">04</span>
           <h3>System Toggle</h3>
-          <p>Seventeen of them — see below. Destructive ones can be flagged to ask first.</p>
+          <p>Sixteen of them — see below. Destructive ones can be flagged to ask first.</p>
         </article>
         <article class="act" data-tilt><span class="act-n">05</span>
           <h3>Media Controls</h3>
@@ -326,8 +344,8 @@
         </article>
         <article class="act" data-tilt><span class="act-n">06</span>
           <h3>Snippets</h3>
-          <p>Canned text, either copied to the clipboard or typed at the cursor. Email, signature, that one shell
-            incantation.</p>
+          <p>Canned text, straight onto your clipboard. Email, signature, that one shell incantation you can never
+            remember.</p>
         </article>
         <article class="act" data-tilt><span class="act-n">07</span>
           <h3>Open File / Folder</h3>
@@ -336,11 +354,11 @@
         <article class="act" data-tilt><span class="act-n">08</span>
           <h3>Custom Script</h3>
           <p><code>.sh</code> <code>.py</code> <code>.ps1</code> <code>.bat</code> — the escape hatch that covers
-            everything the other nine don't.</p>
+            everything the other eleven don't.</p>
         </article>
         <article class="act" data-tilt><span class="act-n">09</span>
           <h3>Webhook</h3>
-          <p>HTTP GET or POST with your own body and headers. Home Assistant, IFTTT, Zapier, your own box.</p>
+          <p>HTTP GET or POST with your own body. Home Assistant, IFTTT, Zapier, your own box.</p>
         </article>
         <article class="act" data-tilt><span class="act-n">10</span>
           <h3>Macro</h3>
@@ -350,12 +368,17 @@
           <h3>Focus Timer</h3>
           <p>Start, pause or stop a pomodoro. Your own minutes on and off — the presets in the dial are just these.</p>
         </article>
+        <article class="act" data-tilt><span class="act-n">12</span>
+          <h3>Bloom</h3>
+          <p>Bloom's own doors, as ordinary nodes: the settings window, the command palette, the task board. Two of
+            them sit on your dial the day you install it.</p>
+        </article>
       </div>
 
       <div class="toggles reveal">
         <h3 class="toggles-title">System toggles, built in</h3>
         <div class="chips">
-          <span>Screenshot</span><span>Lock screen</span><span>Dark mode</span><span>Night light</span>
+          <span>Lock screen</span><span>Dark theme</span><span>Night light</span>
           <span>Mute</span><span>Volume up</span><span>Volume down</span><span>Wi-Fi on</span><span>Wi-Fi off</span>
           <span>Bluetooth on</span><span>Bluetooth off</span><span>Do Not Disturb on</span><span>Do Not Disturb
             off</span>
@@ -363,7 +386,7 @@
         </div>
         <p class="toggles-note">Each one maps to the native command for your OS — <code>nmcli</code>,
           <code>gsettings</code>,
-          <code>bluetoothctl</code>, <code>systemctl</code> on Linux; <code>netsh</code>, <code>powrprof</code>,
+          <code>bluetoothctl</code>, <code>systemctl</code> on Linux; <code>netsh</code>, PowerShell and
           ms-settings deep links on Windows.
         </p>
       </div>
@@ -445,10 +468,10 @@
       <div class="matrix reveal">
         <div class="matrix-head">
           <h3 class="matrix-title">And a board for deciding what earns the next block.</h3>
-          <p class="matrix-note">An Eisenhower matrix in Settings — type straight into a quadrant, then move
-            cards as reality changes: drag them, or use the button on the card if you'd rather not. ⏱ on one
-            starts a focus block <em>on that task</em>, and its name shows in the bud's pill, so what you
-            committed to is never more than a hover away.
+          <p class="matrix-note">An Eisenhower matrix in Settings — a title and notes per card, then move them as
+            reality changes: drag, or use the button on the card if you'd rather not. <strong>▶</strong> offers your
+            block lengths and starts one <em>on that task</em>; the card lights up and counts down where it sits, and
+            its name shows in the bud's pill, so what you committed to is never more than a hover away.
             <span class="matrix-hint">Go on — drag one.</span>
           </p>
         </div>
@@ -459,7 +482,7 @@
               <div><span class="quad-name">Do first</span><span class="quad-sub">Urgent + important</span></div>
             </header>
             <div class="quad-body">
-              <article class="tcard" draggable="true"><i></i><span>Ship 1.2.0</span></article>
+              <article class="tcard" draggable="true"><i></i><span>Ship the beta</span></article>
               <article class="tcard" draggable="true"><i></i><span>Fix the Wayland crash</span></article>
             </div>
           </section>
@@ -492,13 +515,104 @@
       </div>
     </section>
 
-    <!-- ─────────────────────────────  HOTKEYS  ───────────────────────────── -->
-    <section class="section band" id="keys">
+    <!-- ─────────────────────────────  GARDEN  ───────────────────────────── -->
+    <section class="section band" id="garden">
       <div class="head reveal">
-        <p class="kicker">06 — Global hotkeys</p>
+        <p class="kicker">06 — The garden</p>
+        <h2>The people at the other desks. <em>No server in the middle.</em></h2>
+        <p class="lede">Open Bloom on an office network and everyone else running it appears — no accounts,
+          no sign-in, nothing leaving the building. Message them, look at what they're working on, hand
+          them a task. Every message goes to one person and is encrypted end to end.</p>
+      </div>
+
+      <div class="gd-stage reveal">
+        <div class="gd-net" id="gardenNet" aria-hidden="true"></div>
+        <p class="gd-cap">Presence is the only thing that is broadcast — a name, a face and where to
+          reach you. Everything you actually say opens a single connection to a single machine.</p>
+      </div>
+
+      <div class="gd-grid reveal">
+        <article class="gd-card" data-tilt>
+          <span class="gd-badge">Discovery</span>
+          <h3>They just show up</h3>
+          <p>A heartbeat on the local network, four seconds apart. People appear as they open their
+            laptops and fade out when they close them — and anyone you have history with stays on the
+            list, marked offline, so a conversation is never hidden behind whether they happen to be awake.</p>
+          <ul class="gd-list">
+            <li>Identity is a permanent random id, never a name — two people called Alex never collide</li>
+            <li>Their machine and address sit under the name, and neither is theirs to type</li>
+          </ul>
+        </article>
+
+        <article class="gd-card" data-tilt>
+          <span class="gd-badge">Point to point</span>
+          <h3>One message, one person</h3>
+          <p>Sending opens a connection straight to that one machine, waits for their Bloom to
+            acknowledge it, and closes. Nobody else is contacted. If they've gone home it waits in the
+            outbox and goes out the moment their heartbeat comes back.</p>
+          <ul class="gd-list">
+            <li>Ticks tell you the difference between sent, waiting and delivered</li>
+            <li>History is kept per person, so it survives a rename or a new IP</li>
+          </ul>
+        </article>
+
+        <article class="gd-card" data-tilt>
+          <span class="gd-badge">Tasks</span>
+          <h3>Hand someone a card</h3>
+          <p>Drop a task into a colleague's Eisenhower board and they decide what happens to it —
+            accept it into any quadrant, or decline. Either way you hear back. When they tick it off,
+            you hear that too.</p>
+          <ul class="gd-list">
+            <li>Accept or decline straight from the notification, without opening Settings</li>
+            <li>Share your own board and let people assign into it, or keep it to yourself</li>
+          </ul>
+        </article>
+
+        <article class="gd-card" data-tilt>
+          <span class="gd-badge">Encrypted</span>
+          <h3>Private, not just unlisted</h3>
+          <p>Every install holds an X25519 keypair. Two people derive a key only the two of them can
+            compute, and each message is sealed with AES-256-GCM. A colleague running Bloom at the next
+            desk cannot read a conversation they are not part of — the key is made of two private halves
+            they do not hold.</p>
+          <ul class="gd-list">
+            <li>Only the routing shell is readable on the wire — never the words</li>
+            <li>A code you can read aloud to check nobody is in the middle</li>
+            <li>If someone's key ever changes, Bloom says so instead of quietly going along with it</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="gd-extra reveal">
+        <div class="gd-x">
+          <h4>Pick a face</h4>
+          <p>Thirty animals to be known by. Yours travels with your name, so a wall of similar
+            usernames becomes a wall of different creatures.</p>
+          <div class="gd-faces" aria-hidden="true"><span>🦊</span><span>🐼</span><span>🦉</span><span>🐢</span><span>🦋</span><span>🐙</span><span>🦁</span><span>🐧</span></div>
+        </div>
+        <div class="gd-x">
+          <h4>Notifications that wait for you</h4>
+          <p>A card slides in under the bud, then withdraws — and the bud keeps a soft halo until you
+            rest the cursor on it and actually read. Dragging the bud or clicking it open never counts.</p>
+        </div>
+        <div class="gd-x">
+          <h4>Do not disturb</h4>
+          <p>One toggle stops the interrupting. Messages still arrive and still count as unread, and the
+            people trying to reach you see that you're heads-down.</p>
+        </div>
+      </div>
+
+      <p class="foot-note reveal">Nothing here touches the internet. Discovery is a broadcast on your own
+        subnet; everything else is a direct connection between two machines on it.</p>
+    </section>
+
+    <!-- ─────────────────────────────  HOTKEYS  ───────────────────────────── -->
+    <section class="section" id="keys">
+      <div class="head reveal">
+        <p class="kicker">07 — Global hotkeys</p>
         <h2>Never touch the bud <em>at all.</em></h2>
-        <p class="lede">Four global bindings are always registered, even with the bud hidden in the tray.
-          Every one of them is rebindable.</p>
+        <p class="lede">Four global bindings, live even with the bud hidden in the tray. Every one is
+          rebindable, and the two voice ones can be cleared away entirely if you never use them.</p>
       </div>
 
       <div class="hk-list reveal">
@@ -546,16 +660,16 @@
           <div class="qf-row"><span class="qf-k"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>W</kbd></span><span
               class="qf-arrow">→</span><span class="qf-target">Browser · Work Tabs</span></div>
           <div class="qf-row"><span class="qf-k"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>S</kbd></span><span
-              class="qf-arrow">→</span><span class="qf-target">System · Screenshot</span></div>
+              class="qf-arrow">→</span><span class="qf-target">System · Lock Screen</span></div>
         </div>
       </div>
     </section>
 
     <!-- ─────────────────────────────  SETTINGS  ───────────────────────────── -->
-    <section class="section" id="settings">
+    <section class="section band" id="settings">
       <div class="head reveal">
-        <p class="kicker">07 — Settings</p>
-        <h2>Seven tabs. <em>Then get out of the way.</em></h2>
+        <p class="kicker">08 — Settings</p>
+        <h2>Eight tabs. <em>Then get out of the way.</em></h2>
         <p class="lede">A proper resizable window — not the transient dial — for the rare moments you
           actually need to edit something.</p>
       </div>
@@ -566,6 +680,7 @@
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-appearance">Appearance</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-hotkeys">Hotkeys &amp; Input</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-focus">Focus &amp; Tasks</button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-garden">Garden</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-profiles">Profiles</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-general">General &amp; Startup</button>
           <button class="tab-btn" role="tab" aria-selected="false" data-tab="t-about">About &amp; Updates</button>
@@ -579,21 +694,32 @@
           </div>
           <div class="tab-panel" id="t-appearance" role="tabpanel">
             <h3>One look, tuned to taste.</h3>
-            <p>Bloom keeps one considered visual identity. What you tune is size, node spacing, ring radius and gap,
-              motion pacing and the accent colour, with a live preview beside the sliders.</p>
+            <p>Bloom keeps one considered visual identity. What you tune is wedge thickness, dial radius, layer gap,
+              backdrop dim and motion speed; then the bud's own size, idle opacity and how long a cursor must rest on
+              it before waiting notifications open. One accent colour, one live preview beside the sliders.</p>
           </div>
           <div class="tab-panel" id="t-hotkeys" role="tabpanel">
             <h3>Rebind everything.</h3>
-            <p>All four global hotkeys, plus per-node quickfire bindings — and if another app already owns a
-              combination, Bloom says so instead of leaving a key that looks bound and never fires. Tune hover-to-open
-              delay, edge snapping and scroll-cycling.</p>
+            <p>All four global hotkeys — clear the two voice ones entirely if you'd rather — plus per-node quickfire
+              bindings. If another app already owns a combination, Bloom says so instead of leaving a key that looks
+              bound and never fires. Also here: hover-to-open delay, edge snapping, scroll-cycling, pinning the bud,
+              which of the three speech models to use, the read-aloud voice and its speed, and the ring's keyboard
+              cheat sheet in print.</p>
           </div>
           <div class="tab-panel" id="t-focus" role="tabpanel">
             <h3>The timer, and what earns it.</h3>
             <p>The running block with its ring, the presets behind it, whether breaks start on their own, and
               which sound each phase change plays. Underneath, the <strong>Eisenhower matrix</strong> — four
-              quadrants you type into and drag between, with a ⏱ on every card that starts a focus block on
-              that one task.</p>
+              quadrants, a title and notes per card, drag between them as reality changes. <strong>▶</strong> on a
+              card offers your block lengths and starts one on that task; the card lights up and counts down where
+              it sits.</p>
+          </div>
+          <div class="tab-panel" id="t-garden" role="tabpanel">
+            <h3>Who else is on this network.</h3>
+            <p>The people running Bloom near you, each with their face, machine and address. Open one to chat, read
+              their board, or hand them a task. Your name and animal live here, along with the switch that decides
+              whether anyone may see your matrix, and <strong>Do Not Disturb</strong> for when you want the messages
+              without the interruptions.</p>
           </div>
           <div class="tab-panel" id="t-profiles" role="tabpanel">
             <h3>Whole setups, swapped instantly.</h3>
@@ -603,9 +729,10 @@
               switching never repaints the app. The four <strong>starter templates</strong> live here too.</p>
           </div>
           <div class="tab-panel" id="t-general" role="tabpanel">
-            <h3>Startup and behaviour.</h3>
-            <p>Launch at login (on by default the first run, off in one click), tray behaviour, bud size and idle
-              opacity, pin-in-place, and the reset-onboarding button if you want the intro tour again.</p>
+            <h3>Startup, and getting your setup out.</h3>
+            <p>Launch at login (on by default the first run, off in one click) and whether the bud shows on start.
+              Then the way out: <strong>export your whole configuration</strong> to a JSON file and import it on
+              another machine, the path to that file spelled out, and a reset-to-defaults you have to mean.</p>
           </div>
           <div class="tab-panel" id="t-about" role="tabpanel">
             <h3>Updates on your terms.</h3>
@@ -622,10 +749,10 @@
       <div class="firstrun reveal">
         <div class="fr-copy">
           <h3 class="fr-title">And it doesn't start empty.</h3>
-          <p class="fr-note">The welcome cards end with two questions — what your day mostly looks like, and how
-            long you like to work. Bloom then starts you on the matching setup instead of a generic one. All three
-            land in Profiles either way, so nothing is closed off. Skip the questions and you get the stock tree,
-            untouched.</p>
+          <p class="fr-note">Six welcome cards, one question: what your day mostly looks like. Bloom then starts
+            you on the matching setup instead of a generic one. All four land in Profiles either way, so nothing is
+            closed off — and one of those cards introduces the Garden, so you know the people around you are there
+            before you go looking. Skip the question and you get the stock tree, untouched.</p>
         </div>
         <div class="fr-cards">
           <article class="fr-card">
@@ -650,9 +777,9 @@
     </section>
 
     <!-- ─────────────────────────────  CRAFT  ───────────────────────────── -->
-    <section class="section band" id="craft">
+    <section class="section" id="craft">
       <div class="head reveal">
-        <p class="kicker">08 — Under it all</p>
+        <p class="kicker">09 — Under it all</p>
         <h2>The boring parts, <em>done properly.</em></h2>
       </div>
 
@@ -690,20 +817,21 @@
             there to bring the bud back from hiding.</p>
         </article>
         <article class="c-card" data-tilt>
-          <h3>Nothing phones home</h3>
-          <p>No telemetry, no account, no cloud. The only network call Bloom ever makes is the update
-            check you can switch off.</p>
+          <h3>Nothing leaves your network</h3>
+          <p>No telemetry, no account, no cloud. Bloom makes three kinds of network call and you can name all
+            three: the update check you can switch off, the one-time voice model download, and Garden — which
+            never goes past your own subnet.</p>
         </article>
       </div>
     </section>
 
     <!-- ─────────────────────────────  DOWNLOAD  ───────────────────────────── -->
-    <section class="section" id="download">
+    <section class="section band" id="download">
       <div class="head reveal">
-        <p class="kicker">09 — Get Bloom</p>
+        <p class="kicker">10 — Get Bloom</p>
         <h2>Grab the build <em>for your desktop.</em></h2>
-        <p class="lede">The Whisper voice model and the Linux window tooling are bundled into the
-          installer. Nothing else to download, nothing to configure.</p>
+        <p class="lede">The Linux window tooling comes with the package. The Whisper model fetches itself the
+          first time you dictate, once, and never again. Nothing to configure either way.</p>
       </div>
 
       <div class="dl reveal">

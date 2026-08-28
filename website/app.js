@@ -173,6 +173,9 @@ const I = {
   sparkle:  'M12 3.2l2.1 6.7 6.7 2.1-6.7 2.1-2.1 6.7-2.1-6.7L3.2 12l6.7-2.1z',
   next:     'M6.5 5.5l9 6.5-9 6.5zM18 5.5v13',
   prev:     'M17.5 5.5l-9 6.5 9 6.5zM6 5.5v13',
+  timer:    'M12 7.5v5l3.5 2M12 3.2a8.8 8.8 0 1 0 0 17.6 8.8 8.8 0 0 0 0-17.6Z',
+  pause:    'M9.5 5.5v13M14.5 5.5v13',
+  stop:     'M6.8 6.8h10.4v10.4H6.8z',
   bloom:    ''
 };
 
@@ -558,13 +561,13 @@ if (fine && !reduce) {
   };
   addEventListener('keydown', (e) => {
     if (/^\d$/.test(e.key)) return hit('Digit');
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Home'].includes(e.key)) hit(e.key);
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Home', '?'].includes(e.key)) hit(e.key);
   });
 })();
 
 /* ─────────────  8. focus ring demo  ─────────────
    A real 20/10 block, sped up ~100× so a visitor sees a whole cycle. The colours are
-   the app's own rule: focus on the accent, break fixed green, paused fixed grey. */
+   the app's own rule, fixed in every profile: focus green, break red, paused grey. */
 (function ringDemo() {
   const wrap = $('#ringDemo'), prog = $('#ringProg');
   if (!wrap || !prog) return;
@@ -722,6 +725,110 @@ $('#year').textContent = new Date().getFullYear();
     if (img) el.app.href = img;
     el.ver.textContent = `Latest: ${data.tag_name} · ${new Date(data.published_at).toLocaleDateString()}`;
   } catch { el.ver.textContent = ''; }
+})();
+
+
+/* ─────────────  14. garden network  ─────────────
+   Three machines on one network. A packet runs the lit wire between two of them
+   and the third never lights — which is the whole claim the section makes, shown
+   rather than asserted. Click a peer to send to that one instead. */
+
+(function gardenNet() {
+  const wrap = $('#gardenNet');
+  if (!wrap) return;
+
+  const W = 620, H = 280, cx = W / 2, cy = H / 2 - 6, R = 96;
+  const PEERS = [
+    { face: '\u{1F43C}', name: 'priya' },
+    { face: '\u{1F989}', name: 'sam' },
+    { face: '\u{1F98A}', name: 'alex' }
+  ];
+  const at = i => {
+    const a = -Math.PI / 2 + (i / PEERS.length) * Math.PI * 2;
+    return [cx + R * Math.cos(a), cy + R * Math.sin(a)];
+  };
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const el = (n, attrs) => {
+    const e = document.createElementNS(ns, n);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  };
+
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+  svg.setAttribute('aria-label', 'Three machines on a network, with one private connection lit between two of them');
+  wrap.appendChild(svg);
+
+  let target = 0;          // which peer "you" are talking to
+  let t = 0;               // packet position along the wire, 0..1
+  let raf = null;
+
+  function render() {
+    svg.textContent = '';
+    svg.appendChild(el('circle', { class: 'gd-orbit', cx, cy, r: R }));
+
+    // Every peer is reachable; only one is being talked to.
+    PEERS.forEach((p, i) => {
+      const [x, y] = at(i);
+      const w = el('line', { class: 'gd-wire' + (i === target ? ' hot' : ''), x1: cx, y1: cy, x2: x, y2: y });
+      svg.appendChild(w);
+    });
+
+    // You, in the middle.
+    const me = el('g', { class: 'gd-peer on' });
+    me.appendChild(el('circle', { cx, cy, r: 26 }));
+    const meT = el('text', { x: cx, y: cy });
+    meT.textContent = '\u{1F980}';
+    me.appendChild(meT);
+    svg.appendChild(me);
+    const meL = el('text', { class: 'gd-label', x: cx, y: cy + 42 });
+    meL.textContent = 'you';
+    svg.appendChild(meL);
+
+    PEERS.forEach((p, i) => {
+      const [x, y] = at(i);
+      const g = el('g', { class: 'gd-peer' + (i === target ? ' on' : ''), style: 'cursor:pointer' });
+      g.appendChild(el('circle', { cx: x, cy: y, r: 24 }));
+      const tx = el('text', { x, y });
+      tx.textContent = p.face;
+      g.appendChild(tx);
+      const lb = el('text', { class: 'gd-label', x, y: y + 40 });
+      lb.textContent = p.name;
+      g.appendChild(lb);
+      g.addEventListener('click', ev => {
+        target = i; t = 0;
+        if (petals.enabled) petals.burst(ev.clientX, ev.clientY, 7);
+        render();
+      });
+      svg.appendChild(g);
+    });
+
+    svg.appendChild(el('circle', { class: 'gd-packet', id: 'gdPacket', cx, cy, r: 3.5 }));
+  }
+
+  function tick() {
+    t += 0.011;
+    if (t > 1) t = 0;
+    const dot = svg.querySelector('#gdPacket');
+    if (dot) {
+      const [x, y] = at(target);
+      // Ease so it leaves and arrives gently rather than sliding at a constant rate.
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      dot.setAttribute('cx', cx + (x - cx) * e);
+      dot.setAttribute('cy', cy + (y - cy) * e);
+      dot.setAttribute('opacity', String(Math.sin(Math.PI * t)));
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  render();
+  if (reduce) return;   // a packet looping forever is exactly what reduced-motion asks us not to do
+
+  // Don't animate a section nobody has scrolled to yet.
+  new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting && !raf) raf = requestAnimationFrame(tick);
+    else if (!e.isIntersecting && raf) { cancelAnimationFrame(raf); raf = null; }
+  }), { threshold: .15 }).observe(wrap);
 })();
 
 })();

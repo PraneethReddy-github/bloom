@@ -909,6 +909,8 @@ kbd {
 .act,
 .c-card,
 .v-card,
+.gd-card,
+.gd-x,
 .hk,
 .qf-demo,
 .tabs,
@@ -925,6 +927,7 @@ kbd {
 .act::after,
 .c-card::after,
 .v-card::after,
+.gd-card::after,
 .dl-card::after {
   content: '';
   position: absolute;
@@ -2309,10 +2312,16 @@ kbd {
   .act-grid,
   .craft-grid,
   .voice-grid,
+  .gd-grid,
+  .gd-extra,
   .hk-list,
   .dl-cards,
   .quad-grid {
     grid-template-columns: 1fr;
+  }
+
+  .gd-net {
+    height: 220px;
   }
 
   .ring-stage {
@@ -2379,5 +2388,263 @@ kbd {
   #petals,
   .spotlight {
     display: none;
+  }
+}
+
+
+/* ─────────────────────────────  garden  ───────────────────────────── */
+
+/* The one picture the section needs: three machines on a network, and a single lit
+   line between two of them. Everything else in the section is a footnote to it. */
+.gd-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.gd-net {
+  width: 100%;
+  max-width: 620px;
+  height: 280px;
+  position: relative;
+}
+
+.gd-net svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gd-net .gd-orbit {
+  fill: none;
+  stroke: var(--line);
+  stroke-dasharray: 3 7;
+}
+
+.gd-net .gd-wire {
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.gd-net .gd-wire.hot {
+  stroke: var(--petal);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.gd-net .gd-peer circle {
+  fill: var(--panel-2);
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.gd-net .gd-peer.on circle {
+  stroke: var(--petal);
+  stroke-width: 1.6;
+}
+
+.gd-net .gd-peer text {
+  font-size: 20px;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.gd-net .gd-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  fill: var(--bone-faint);
+  text-anchor: middle;
+}
+
+.gd-net .gd-peer.on .gd-label {
+  fill: var(--petal);
+}
+
+/* The packet that runs the lit wire, so the "one connection to one person" claim
+   is something you watch rather than read. */
+.gd-net .gd-packet {
+  fill: var(--petal);
+}
+
+.gd-cap {
+  max-width: 620px;
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--bone-faint);
+}
+
+.gd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.gd-card {
+  padding: 28px 26px 30px;
+  transition: border-color .35s;
+}
+
+.gd-card:hover {
+  border-color: var(--line-2);
+}
+
+.gd-badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--petal);
+  padding: 5px 10px;
+  border: 1px solid var(--petal-dim);
+  border-radius: 100px;
+  margin-bottom: 18px;
+}
+
+.gd-card h3 {
+  font-size: 23px;
+  margin-bottom: 11px;
+  letter-spacing: -.035em;
+}
+
+.gd-card > p {
+  font-size: 14.5px;
+  color: var(--bone-dim);
+  line-height: 1.66;
+}
+
+.gd-list {
+  list-style: none;
+  margin-top: 18px;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.gd-list li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--bone-faint);
+}
+
+.gd-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--petal-dim);
+  border: 1px solid var(--petal);
+}
+
+.gd-extra {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.gd-x {
+  padding: 24px 22px 26px;
+}
+
+.gd-x h4 {
+  font-size: 16px;
+  letter-spacing: -.02em;
+  margin-bottom: 9px;
+}
+
+.gd-x p {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--bone-dim);
+}
+
+.gd-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.gd-faces span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+
+/* Nine cards in a four-column grid leave one adrift. The newest gesture takes the
+   whole last row instead, which reads as emphasis rather than as a gap. */
+.g-card.wide {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  align-items: start;
+  gap: 6px 26px;
+}
+
+.g-card.wide .g-tag {
+  grid-row: 1;
+  align-self: start;
+  justify-self: start;   /* the pill hugs its text instead of stretching the column */
+}
+
+.g-card.wide h3 {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.g-card.wide p {
+  grid-column: 2;
+  grid-row: 2;
+  max-width: 68ch;
+}
+
+@media (max-width: 900px) {
+  .g-card.wide {
+    grid-template-columns: 1fr;
+  }
+
+  .g-card.wide h3,
+  .g-card.wide p {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* Restated after the garden base rules above: same specificity, later wins. */
+@media (max-width: 1080px) {
+  .gd-extra {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .gd-grid,
+  .gd-extra {
+    grid-template-columns: 1fr;
+  }
+
+  .gd-net {
+    height: 220px;
+  }
+
+  .gd-card {
+    padding: 24px 22px 26px;
   }
 }

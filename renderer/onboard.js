@@ -48,6 +48,28 @@
     </svg>`;
   }
 
+  // Card: the garden. Three peers around a ring, one private line lit between two
+  // of them and the third left out of it — which is the claim the feature makes.
+  function gardenArt() {
+    const cx = 74, cy = 74, r = 44;
+    const at = a => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const A = at(-Math.PI / 2), B = at(-Math.PI / 2 + (2 * Math.PI) / 3), C = at(-Math.PI / 2 + (4 * Math.PI) / 3);
+    const face = (p, on, emoji) => `
+      <circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="19"
+              fill="${on ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)'}"
+              stroke="${on ? ACC : 'rgba(255,255,255,0.18)'}" stroke-width="${on ? 1.8 : 1}"/>
+      <text x="${p[0].toFixed(1)}" y="${(p[1] + 7).toFixed(1)}" text-anchor="middle" font-size="20"
+            fill="#fff">${emoji}</text>`;
+    return `<svg width="148" height="148" viewBox="0 0 148 148" fill="none" aria-hidden="true">
+      <circle cx="${cx}" cy="${cy}" r="${r}" stroke="rgba(255,255,255,0.10)" stroke-width="1" stroke-dasharray="3 5"/>
+      <path d="M${A[0].toFixed(1)} ${A[1].toFixed(1)} L${B[0].toFixed(1)} ${B[1].toFixed(1)}"
+            stroke="${ACC}" stroke-width="2.4" stroke-linecap="round"/>
+      ${face(C, false, '\u{1F98A}')}
+      ${face(A, true, '\u{1F43C}')}
+      ${face(B, true, '\u{1F989}')}
+    </svg>`;
+  }
+
   // Card 3: the summon shortcut, shown as keycaps.
   const keysArt = `<div class="ob-keys">${hkKeys.map(k => `<div class="ob-key">${IC.escapeHTML(k)}</div>`).join('')}</div>`;
 
@@ -66,6 +88,11 @@
       art: keysArt,
       h: 'Summon it from anywhere',
       p: `Press these keys to call the ring up over any app. <b>Drag the bud</b> wherever it feels right, or pin it in place.`
+    },
+    {
+      art: gardenArt(),
+      h: 'The people around you',
+      p: `Anyone running Bloom on the same network shows up in your <b>Garden</b> — message them, see what they're working on, hand them a task. Each one goes to that person alone, <b>end-to-end encrypted</b>.`
     },
     {
       h: 'Which of these is most like your day?',

@@ -1107,13 +1107,19 @@
   }
 
   // ---- toasts ----
-  function toast(kind, msg, sub, action) {
+  function toast(kind, msg, sub, action, sticky = false) {
     const t = document.createElement('div');
-    t.className = `toast glass-card ${kind}`;
-    t.innerHTML = IC.markup(kind === 'ok' ? 'check' : kind === 'err' ? 'x' : 'sparkle', 16) +
+    t.className = `toast glass-card ${kind}` + (sticky ? ' sticky' : '');
+    const dismissHtml = sticky ? `<button class="t-dismiss" style="position:absolute;top:4px;right:4px;background:none;border:none;cursor:pointer;color:var(--ink-faint);">${IC.markup('x', 14)}</button>` : '';
+    t.innerHTML = dismissHtml + IC.markup(kind === 'ok' ? 'check' : kind === 'err' ? 'x' : 'sparkle', 16) +
       `<div class="t-msg">${IC.escapeHTML(msg)}${sub ? `<small>${IC.escapeHTML(sub)}</small>` : ''}</div>` +
       (action ? `<button>${IC.escapeHTML(action.label)}</button>` : '');
     if (action) t.querySelector('button').onclick = () => { action.fn(); dismiss(); };
+    if (sticky) {
+      const db = t.querySelector('.t-dismiss');
+      if (db) db.onclick = () => dismiss();
+      t.style.paddingRight = '24px'; // Make room for close button
+    }
     toastsEl.appendChild(t);
     state.toastCount++;
     syncUI(); // overlay must be visible (click-through) while toasts show
@@ -1129,24 +1135,184 @@
         if (state.toastCount) positionToasts();      // stack shrank — re-hug the bud
       }, 240);
     };
-    setTimeout(dismiss, action ? 6200 : 3600);
-    while (toastsEl.children.length > 3) { toastsEl.firstChild.remove(); state.toastCount = Math.max(0, state.toastCount - 1); }
+    if (!sticky) {
+      setTimeout(dismiss, action ? 6200 : 3600);
+    }
+    // Only auto-evict non-sticky toasts if too many
+    while (toastsEl.children.length > 5) {
+       const oldestNonSticky = Array.from(toastsEl.children).find(el => !el.classList.contains('sticky'));
+       if (oldestNonSticky) {
+           oldestNonSticky.remove();
+           state.toastCount = Math.max(0, state.toastCount - 1);
+       } else {
+           toastsEl.firstChild.remove();
+           state.toastCount = Math.max(0, state.toastCount - 1);
+       }
+    }
   }
   // Toasts hang off the bud itself, not the screen — keep them within arm's
   // reach of it so voice/status feedback reads as coming from the bud.
-  const TOAST_GAP = 14;
+  const TOAST_GAP = 6;
   function positionToasts() {
     const below = state.bud.y < H() * 0.55;
     const y = below ? state.bud.y + budR() + TOAST_GAP : state.bud.y - budR() - TOAST_GAP - toastsEl.offsetHeight;
     toastsEl.style.left = Math.max(220, Math.min(W() - 220, state.bud.x)) + 'px';
     toastsEl.style.top = Math.max(12, Math.min(H() - toastsEl.offsetHeight - 12, y)) + 'px';
+    toastsEl.style.bottom = 'auto'; // Prevent stretching with CSS default
   }
+  new ResizeObserver(() => positionToasts()).observe(toastsEl);
 
   window.bloom.on('exec-feedback', f => {
     // voice feedback sends its text as `note` even when it failed — don't drop it
     if (!f.ok) toast('err', f.label || 'Action failed', f.error || f.note);
     else if (f.note) toast(f.nodeId ? 'ok' : 'info', f.label || '', f.note);
   });
+  
+  // ---- garden notifications ----
+  // Two moments, deliberately distinct:
+  //   arrival — a card slides in under the bud for a few seconds, then withdraws.
+  //             The bud keeps pulsing; nothing has been read yet.
+  //   peek    — the cursor has rested on the bud, so the whole unread stack comes
+  //             back and stays until the cursor leaves. Leaving is what marks it read.
+  // Main owns the queue; this renderer only draws it.
+  const NOTIF_GLANCE_MS = 3400;
+  const notifCards = new Map();   // notification id -> element
+  let notifPeeking = false;
+  let glanceTimer = null;
+
+  const NOTIF_ICON = { msg: 'message', task: 'inbox', accepted: 'check', denied: 'x', done: 'check' };
+  const NOTIF_TONE = { msg: 'info', task: 'info', accepted: 'ok', denied: 'err', done: 'ok' };
+
+  // A stable colour per person, so you learn who a card is from before reading it.
+  function peerHue(id) {
+    let h = 0;
+    for (let i = 0; i < (id || '').length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+    return h;
+  }
+  function relTime(ts) {
+    const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 45) return 'now';
+    if (s < 3600) return Math.round(s / 60) + 'm';
+    return Math.round(s / 3600) + 'h';
+  }
+
+  function notifHeadline(n) {
+    if (n.kind === 'task') return 'sent you a task';
+    if (n.kind === 'accepted') return 'accepted your task';
+    if (n.kind === 'denied') return 'declined your task';
+    if (n.kind === 'done') return 'finished your task';
+    return '';
+  }
+
+  function buildNotif(n) {
+    const el = document.createElement('div');
+    el.className = `toast glass-card notif ${NOTIF_TONE[n.kind] || 'info'}`;
+    el.dataset.nid = n.id;
+    const head = notifHeadline(n);
+    el.innerHTML = `
+      <div class="n-face" style="--hue:${peerHue(n.peerId)}">${IC.escapeHTML(n.avatar || '')}</div>
+      <div class="n-body">
+        <div class="n-top">
+          <span class="n-who">${IC.escapeHTML(n.sender || 'Someone')}</span>
+          ${head ? `<span class="n-what">${head}</span>` : ''}
+          <span class="n-age">${relTime(n.ts)}</span>
+        </div>
+        <div class="n-text">${IC.escapeHTML(n.body || '')}</div>
+        ${n.kind === 'task' ? `
+          <div class="n-acts">
+            <button class="n-btn ok" data-accept="1">Accept</button>
+            <button class="n-btn" data-deny="1">Decline</button>
+          </div>` : ''}
+      </div>
+      <span class="n-kind">${IC.markup(NOTIF_ICON[n.kind] || 'sparkle', 14)}</span>`;
+
+    el.querySelector('.n-body').addEventListener('click', e => {
+      if (e.target.closest('.n-acts')) return;
+      window.bloom.notifOpen(n.id, n.peerId);
+    });
+    const acc = el.querySelector('[data-accept]');
+    const den = el.querySelector('[data-deny]');
+    // Answering straight from the card: the common case never needs Settings at all.
+    if (acc) acc.addEventListener('click', () => {
+      window.bloom.gardenAnswerTask(n.inboxId, true, n.preferredQ);
+      window.bloom.notifDismiss(n.id);
+      toast('ok', n.sender, 'Task added to your matrix');
+    });
+    if (den) den.addEventListener('click', () => {
+      window.bloom.gardenAnswerTask(n.inboxId, false);
+      window.bloom.notifDismiss(n.id);
+    });
+    return el;
+  }
+
+  function dropCard(id) {
+    const el = notifCards.get(id);
+    if (!el) return;
+    notifCards.delete(id);
+    el.classList.add('bye');
+    setTimeout(() => { el.remove(); positionToasts(); syncUI(); }, 220);
+  }
+
+  function clearCards() {
+    for (const id of Array.from(notifCards.keys())) dropCard(id);
+  }
+
+  function showCard(n) {
+    if (notifCards.has(n.id)) return;
+    const el = buildNotif(n);
+    notifCards.set(n.id, el);
+    toastsEl.appendChild(el);
+    positionToasts();
+    syncUI();
+  }
+
+  // The glance withdraws the cards but never the notifications — that is the whole
+  // point of the pulse staying lit afterwards.
+  function scheduleGlance() {
+    clearTimeout(glanceTimer);
+    glanceTimer = setTimeout(() => {
+      glanceTimer = null;
+      if (!notifPeeking) clearCards();
+    }, NOTIF_GLANCE_MS);
+  }
+
+  window.bloom.on('notif-push', d => {
+    notifPeeking = !!d.peeking;
+    showCard(d.notif);
+    if (!notifPeeking) scheduleGlance();
+  });
+
+  window.bloom.on('notif-peek', d => {
+    notifPeeking = !!d.on;
+    if (d.on) {
+      clearTimeout(glanceTimer); glanceTimer = null;
+      const keep = new Set((d.list || []).map(n => n.id));
+      for (const id of Array.from(notifCards.keys())) if (!keep.has(id)) dropCard(id);
+      for (const n of d.list || []) showCard(n);
+    } else {
+      clearCards();
+    }
+  });
+
+  window.bloom.on('notif-state', s => { if (!s.count) clearCards(); });
+
+  // ---- pointer hand-off ----
+  // While a peek is open main makes this window genuinely interactive, so the cards
+  // can be pressed. The overlay is fullscreen, so the deal is: it reports the moment
+  // the pointer is no longer on a card and main hands input straight back.
+  toastsEl.addEventListener('mouseenter', () => {
+    if (notifCards.size) window.bloom.notifHover(true);
+  });
+  toastsEl.addEventListener('mouseleave', () => window.bloom.notifHover(false));
+
+  document.addEventListener('mousemove', e => {
+    if (notifPeeking && !e.target.closest('#toasts')) window.bloom.notifHover(false);
+  }, true);
+  // Clicking anywhere off the cards is a dismissal — end the peek at once rather
+  // than sit interactive over the whole screen waiting for a grace period.
+  document.addEventListener('mousedown', e => {
+    if (notifPeeking && !e.target.closest('#toasts')) window.bloom.notifSeen();
+  }, true);
 
   // ---- context menu ----
   function showCtx(x, y) {
@@ -1155,6 +1321,8 @@
       { ic: 'pencil', label: 'Edit Actions', fn: () => window.bloom.openSettings('actions') },
       { ic: 'gear', label: 'Settings', fn: () => window.bloom.openSettings() },
       { ic: 'lock', label: cfg.bud.pinned ? 'Unpin Position' : 'Pin Position', fn: () => window.bloom.patchConfig({ bud: { pinned: !cfg.bud.pinned } }) },
+      { ic: 'moon', label: cfg.notifications && cfg.notifications.dnd ? 'Turn off Do Not Disturb' : 'Do Not Disturb',
+        fn: () => window.bloom.patchConfig({ notifications: { dnd: !(cfg.notifications && cfg.notifications.dnd) } }) },
       { sep: true },
       { ic: 'power', label: 'Quit Bloom', fn: () => window.bloom.quit(), danger: true }
     ];
@@ -1203,7 +1371,7 @@
     window.bloom.uiState({
       ringOpen: state.open,
       uiActive: state.palOpen || state.ctxOpen || state.cheatOpen,
-      displayOnly: state.chip.active || state.focusTip || state.toastCount > 0
+      displayOnly: state.chip.active || state.focusTip || state.toastCount > 0 || notifCards.size > 0
     });
   }
 
@@ -1215,7 +1383,7 @@
     if (state.open) refreshVisibility('resize');
     if (state.chip.active) renderChip(pinnedNodes());
     if (state.focusTip) { focusTipEl.style.left = p.x + 'px'; focusTipEl.style.top = (p.y - budR() - 16) + 'px'; }
-    if (state.toastCount) positionToasts();          // toasts ride along with the bud
+    if (state.toastCount || notifCards.size) positionToasts();   // toasts ride along with the bud
   });
 
   window.bloom.on('summon-ring', d => {
