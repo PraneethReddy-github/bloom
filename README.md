@@ -19,6 +19,7 @@ Bloom is a floating, draggable glass bud that lives on top of your desktop. Clic
 - [Features & Usage](#features--usage)
 - [Built-in Voice AI](#built-in-voice-ai-no-internet-required)
 - [Focus timer & task matrix](#focus-timer--task-matrix)
+- [Garden — LAN collaboration](#garden--lan-collaboration)
 - [Actions Supported](#actions-supported)
 - [Settings](#settings)
 - [First run](#first-run)
@@ -119,6 +120,34 @@ Presets are ordinary actions, so a preset is edited exactly like anything else i
 ### The matrix
 
 **Settings › Focus & Tasks** holds an Eisenhower board: four quadrants — *Do first*, *Schedule*, *Delegate*, *Eliminate*. Type into a quadrant to add a task, then move cards as reality changes — drag them, or use the ⇄ button on a card if you'd rather not. The circle on the left marks a task done, ⏱ starts a focus block **on that task** (its name then shows in the bud's hover pill), and delete offers an undo. The board is also one click from the dial via the **Tasks** node.
+
+## Garden — LAN collaboration
+
+Garden is Bloom's built-in, zero-config local-network layer. It discovers other Bloom users on the same LAN automatically and lets you collaborate without any server, account, or internet connection.
+
+### Presence & identity
+
+Each install gets a persistent random ID. Pick a name and an animal avatar in **Settings › Garden**; if you don't, a stable face is derived from your ID so you're still recognisable. UDP broadcast handles discovery — peers appear and disappear in real time.
+
+### Encrypted messaging
+
+Every conversation is end-to-end encrypted with X25519 + HKDF. The key is derived from the two participants' private keys, so a third colleague on the same network cannot read it even though they receive the same broadcasts. A shared **pair code** (visible on both sides) lets two people confirm their link is not intercepted.
+
+### Task delegation
+
+Send a task to a peer and optionally assign it to an Eisenhower quadrant. The recipient can accept or decline; accepting drops it into their matrix. When they mark it done, you're notified.
+
+### Shared matrix
+
+Request a read-only snapshot of someone's Eisenhower board from the **Matrix** tab in a conversation. The owner's board is fetched live over the encrypted channel — nothing is stored on your side beyond the current view.
+
+### Notifications
+
+Incoming messages and tasks appear as notification pills on the bud. Hover to peek at the content, click to jump straight to the conversation. Notifications respect your existing DND toggle.
+
+### Offline queue
+
+Messages and tasks sent while a peer is offline are queued locally and delivered automatically when they reconnect, with a 24-hour expiry.
 
 ## Actions Supported
 
