@@ -21,6 +21,7 @@ let settingsWin = null;
 let onboardWin = null;
 let tray = null;
 let cfg = null;
+let isQuitting = false;
 
 // What the overlay currently needs from the OS.
 const uiFlags = { ringOpen: false, uiActive: false, displayOnly: false };
@@ -187,7 +188,7 @@ function createOverlay() {
   // Stay mapped forever to avoid WM map/unmap animations; re-assert setSkipTaskbar since Linux drops the hint on map.
   overlay.once('ready-to-show', () => { overlay.showInactive(); overlay.setSkipTaskbar(true); });
   if (process.env.BLOOM_DEVTOOLS) overlay.webContents.openDevTools({ mode: 'detach' });
-  overlay.on('closed', () => { overlay = null; app.quit(); });
+  overlay.on('closed', () => { overlay = null; if (!isQuitting) app.quit(); });
 
   // Keep the union in sync when monitors are added/removed/rearranged.
   for (const ev of ['display-added', 'display-removed', 'display-metrics-changed']) {
@@ -1659,10 +1660,57 @@ function summonFileRing(filePath) {
 }
 
 // ---- boot ----
-const gotLock = app.requestSingleInstanceLock();
+// Electron's single-instance lock creates a socket/lock file in the app's userData
+// directory. On Linux, a crash or unclean shutdown can leave a stale lock behind,
+// preventing the app from relaunching until the next reboot clears the socket.
+// We clean up stale locks by checking whether the "other instance" is actually alive.
+function clearStaleLock() {
+  // Electron stores lock files under the userData path. On Linux, the lock is a
+  // symlink (SingletonLock) whose target encodes the PID of the holder. If that
+  // process is dead, the lock is stale and safe to remove.
+  try {
+    const userDataPath = app.getPath('userData');
+    const lockFile = path.join(userDataPath, 'SingletonLock');
+    if (!fs.existsSync(lockFile)) return false;
+    const target = fs.readlinkSync(lockFile); // e.g. "hostname-12345"
+    const pidMatch = target.match(/-(\d+)$/);
+    if (!pidMatch) return false;
+    const pid = parseInt(pidMatch[1], 10);
+    // Check if the process is still alive. kill(pid, 0) throws if the process
+    // doesn't exist; it does nothing if it does.
+    try { process.kill(pid, 0); return false; } // process is alive — lock is valid
+    catch { /* process is dead — lock is stale */ }
+    // Remove stale lock files so requestSingleInstanceLock() succeeds.
+    for (const name of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
+      const f = path.join(userDataPath, name);
+      try { fs.unlinkSync(f); } catch { /* already gone or dir — fine */ }
+    }
+    // Also check for scoped_dir* subdirectories with singleton files
+    try {
+      for (const entry of fs.readdirSync(userDataPath)) {
+        if (!entry.startsWith('scoped_dir')) continue;
+        const scopedDir = path.join(userDataPath, entry);
+        for (const name of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
+          try { fs.unlinkSync(path.join(scopedDir, name)); } catch { /* fine */ }
+        }
+      }
+    } catch { /* best effort */ }
+    return true; // we cleaned up
+  } catch { return false; }
+}
+
+let gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
-  app.quit();
-} else {
+  // Before giving up, check whether the lock is stale (holder process is dead).
+  if (clearStaleLock()) {
+    gotLock = app.requestSingleInstanceLock();
+  }
+  if (!gotLock) {
+    app.quit();
+  }
+}
+
+if (gotLock) {
   app.on('second-instance', () => summonRing());
 
   app.whenReady().then(async () => {
@@ -1704,7 +1752,15 @@ if (!gotLock) {
 
   // Tell the network we're leaving instead of letting peers time us out, and flush
   // any debounced chat writes before the process goes.
-  app.on('before-quit', () => garden.stop());
-  app.on('will-quit', () => globalShortcut.unregisterAll());
-  app.on('window-all-closed', () => app.quit());
+  app.on('before-quit', () => {
+    isQuitting = true;
+    garden.stop();
+  });
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+    // Explicitly release the single-instance lock so the lock file is cleaned up.
+    // Without this, a stale lock can prevent relaunch on Linux until reboot.
+    app.releaseSingleInstanceLock();
+  });
+  app.on('window-all-closed', () => { if (!isQuitting) app.quit(); });
 }
