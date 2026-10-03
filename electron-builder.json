@@ -9,11 +9,13 @@
     "main.js",
     "preload.js",
     "config.js",
+    "garden.js",
+    "RELEASE_NOTES.md",
+    "models/**/*",
     "resources/icon.png",
     "renderer/**/*",
     "!test${/*}",
-    "!**/*.map",
-    "!**/*.md"
+    "!**/*.map"
   ],
   "asarUnpack": [
     "**/node_modules/onnxruntime-node/**/*",

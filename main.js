@@ -13,7 +13,6 @@ const IS_LINUX = process.platform === 'linux';
 
 app.setName('bloom');
 if (IS_LINUX) app.commandLine.appendSwitch('enable-transparent-visuals');
-app.setLoginItemSettings({ openAtLogin: true });
 
 let budWin = null;
 let overlay = null;
@@ -436,7 +435,9 @@ async function sendChord(key) {
     case 'xdotool': return run(`xdotool key --clearmodifiers ctrl+${key}`);
     case 'wtype': {
       const res = await run(`wtype -M ctrl -k ${key} -m ctrl`);
-      if (!res.ok && hasBin('xdotool')) return run(`xdotool key --clearmodifiers ctrl+${key}`);
+      // On Wayland, xdotool silently "succeeds" without actually working for native apps,
+      // so if wtype fails (e.g. compositor unsupported), we should return the error 
+      // rather than hiding it behind xdotool's false success.
       return res;
     }
     case 'ydotool': { const c = key === 'v' ? 47 : 46; return run(`ydotool key 29:1 ${c}:1 ${c}:0 29:0`); }
@@ -448,6 +449,13 @@ async function sendChord(key) {
 // user's clipboard afterward. Returns the text, '' if nothing was selected, or
 // null if no input tool is available.
 async function grabSelection() {
+  // On Linux (X11 & Wayland), highlighted text automatically goes to the primary selection.
+  // Reading it directly avoids faking a Ctrl+C chord, which often fails on Wayland compositors.
+  if (IS_LINUX) {
+    const primary = clipboard.readText('selection');
+    if (primary) return primary.trim();
+  }
+
   const prev = clipboard.readText();
   clipboard.writeText('');                           // clear so an empty selection is detectable
   const r = await sendChord('c');
@@ -585,8 +593,10 @@ async function getWhisper() {
   if (whisperLoading) return whisperLoading;
   whisperLoading = (async () => {
     const { pipeline, env } = await import('@xenova/transformers');
-    env.cacheDir = path.join(store.DIR, 'models');   // persist model next to config
-    env.allowLocalModels = false;
+    env.localModelPath = path.join(__dirname, 'models');
+    env.allowLocalModels = true;
+    env.allowRemoteModels = true;
+    env.cacheDir = path.join(store.DIR, 'models');   // persist remote models here
     whisper = await pipeline('automatic-speech-recognition', cfg.voice.model || 'Xenova/whisper-base.en');
     return whisper;
   })();
@@ -1083,7 +1093,7 @@ function setAutostart(enabled) {
   try {
     if (enabled) {
       fs.mkdirSync(path.dirname(AUTOSTART_FILE), { recursive: true });
-      const exec = app.isPackaged ? process.execPath : `${process.execPath} ${app.getAppPath()} --no-sandbox`;
+      const exec = app.isPackaged ? `${process.execPath} --no-sandbox` : `${process.execPath} ${app.getAppPath()} --no-sandbox`;
       // NoDisplay + StartupWMClass keep Bloom a background service, not a launchable app.
       fs.writeFileSync(AUTOSTART_FILE,
         `[Desktop Entry]\nType=Application\nName=Bloom\nComment=Radial action launcher\n` +
