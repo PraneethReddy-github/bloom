@@ -416,7 +416,11 @@ function inputTool() {
   if (IS_WIN) return 'powershell';
   if (!IS_LINUX) return 'osascript';                 // macOS
   const wayland = !!process.env.WAYLAND_DISPLAY || process.env.XDG_SESSION_TYPE === 'wayland';
-  if (wayland) return hasBin('wtype') ? 'wtype' : (hasBin('ydotool') ? 'ydotool' : null);
+  if (wayland) {
+    // Any of these tools can work; the cascade in sendChord tries them in order.
+    if (hasBin('wtype') || hasBin('ydotool') || hasBin('xdotool')) return 'wayland';
+    return null;
+  }
   return hasBin('xdotool') ? 'xdotool' : null;
 }
 
@@ -433,14 +437,26 @@ async function sendChord(key) {
     case 'powershell': return run(`powershell -c "$w=New-Object -ComObject WScript.Shell; $w.SendKeys('^${key}')"`);
     case 'osascript': return run(`osascript -e 'tell application "System Events" to keystroke "${key}" using command down'`);
     case 'xdotool': return run(`xdotool key --clearmodifiers ctrl+${key}`);
-    case 'wtype': {
-      const res = await run(`wtype -M ctrl -k ${key} -m ctrl`);
-      // On Wayland, xdotool silently "succeeds" without actually working for native apps,
-      // so if wtype fails (e.g. compositor unsupported), we should return the error 
-      // rather than hiding it behind xdotool's false success.
-      return res;
+    case 'wayland': {
+      // Cascade: try every available tool until one succeeds.
+      // wtype needs zwp_virtual_keyboard_v1 (not all compositors expose it).
+      if (hasBin('wtype')) {
+        const res = await run(`wtype -M ctrl -k ${key} -m ctrl`);
+        if (res.ok) return res;
+      }
+      // ydotool works at the kernel evdev level — bypasses the compositor entirely.
+      if (hasBin('ydotool')) {
+        const c = key === 'v' ? 47 : 46;
+        const res = await run(`ydotool key 29:1 ${c}:1 ${c}:0 29:0`);
+        if (res.ok) return res;
+      }
+      // xdotool via XWayland — works for X11 apps running under Wayland.
+      if (hasBin('xdotool')) {
+        const res = await run(`xdotool key --clearmodifiers ctrl+${key}`);
+        if (res.ok) return res;
+      }
+      return { ok: false, error: MISSING_TOOL_MSG };
     }
-    case 'ydotool': { const c = key === 'v' ? 47 : 46; return run(`ydotool key 29:1 ${c}:1 ${c}:0 29:0`); }
     default: return { ok: false, error: MISSING_TOOL_MSG };
   }
 }
@@ -454,6 +470,16 @@ async function grabSelection() {
   if (IS_LINUX) {
     const primary = clipboard.readText('selection');
     if (primary) return primary.trim();
+
+    // Electron's primary selection reads through XWayland and misses native Wayland
+    // selections. wl-paste reads the real Wayland primary selection directly.
+    if (hasBin('wl-paste')) {
+      try {
+        const wp = cp.spawnSync('wl-paste', ['--primary', '--no-newline'], { timeout: 1000, encoding: 'utf8' });
+        const wpt = (wp.stdout || '').trim();
+        if (wp.status === 0 && wpt) return wpt;
+      } catch { /* fall through to Ctrl+C */ }
+    }
   }
 
   const prev = clipboard.readText();
@@ -487,6 +513,11 @@ async function injectText(text) {
   setVoiceState('idle');
   if (!text) { voiceToast('No speech detected'); return; }
   clipboard.writeText(text);                        // always leave the transcript on the clipboard
+  // Electron's clipboard goes through XWayland; also push to native Wayland clipboard
+  // so a manual Ctrl+V always works even if automated paste fails.
+  if (IS_LINUX && hasBin('wl-copy')) {
+    try { cp.spawnSync('wl-copy', ['--', text], { timeout: 2000 }); } catch { /* best effort */ }
+  }
   const r = await sendChord('v');
   voiceToast(r.ok ? 'Pasted — also copied to clipboard' : (r.error || MISSING_TOOL_MSG), r.ok);
 }
@@ -552,7 +583,7 @@ async function speakSelection() {
   setVoiceState('speaking');                       // instant orb feedback
   voiceToast('Reading selection…');                // instant toast
   const sel = await grabSelection();
-  if (sel === null) { setVoiceState('idle'); voiceToast(IS_LINUX ? 'Install xdotool (X11) or wtype (Wayland) to read selections' : 'Read-aloud unavailable', false); return; }
+  if (sel === null) { setVoiceState('idle'); voiceToast(IS_LINUX ? 'Could not read selection — try selecting text again' : 'Read-aloud unavailable', false); return; }
   if (!sel) { setVoiceState('idle'); voiceToast('Select some text first, then hold the bud', false); return; }
   const r = await osSpeak(sel, cfg.voice.ttsRate || 1, cfg.voice.ttsVoice);
   setVoiceState('idle');

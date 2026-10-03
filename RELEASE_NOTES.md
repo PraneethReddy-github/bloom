@@ -3,12 +3,8 @@ Edit this before tagging a release. It becomes the GitHub release body and is wh
 see in Settings → About as "What's new". Short bullets only — this comment is not shown.
 -->
 
-**Improvements**
-- **Bundled Offline Speech Model:** The Whisper speech-to-text model is now bundled directly with the application. Dictation will now work immediately on first use without requiring a background download or an internet connection.
-- **Improved Wayland Paste Fallback:** If automatic pasting fails during dictation on Wayland, Bloom will now correctly surface the "Press Ctrl+V to paste" prompt instead of failing silently behind `xdotool`.
-
 **Bug Fixes**
-- **Fixed TTS and Text Selection on Wayland:** Bloom now natively reads the primary selection on Linux (both X11 and Wayland) for the Read-Aloud feature. This bypasses the need to simulate `Ctrl+C`, which fails on many Wayland compositors (like GNOME) that do not support virtual keyboard protocols.
-- **Fixed app not starting after install:** `garden.js` was missing from the build files list, causing the packaged app to crash on startup with `Cannot find module './garden'`. The module is now included in the app bundle.
-- **Fixed autostart without --no-sandbox:** The autostart desktop entry for packaged builds was missing `--no-sandbox`, causing silent crashes on security-focused Linux distros (e.g. Parrot OS). Both the autostart entry and packaged launch now include the flag.
-- **Removed duplicate autostart registration:** An unconditional `app.setLoginItemSettings` call was creating a second autostart entry that conflicted with the manual one, potentially spawning duplicate instances on login.
+- **Fixed TTS and STT on Wayland (for real this time):** The v2.0.2 Read-Aloud and Dictation fixes didn't actually work because `wtype` fails on compositors (KDE Plasma, GNOME) that don't expose the `zwp_virtual_keyboard_v1` protocol, and the only fallback was removed. This release replaces the single-tool strategy with a **wtype → ydotool → xdotool cascade** that tries every available input tool in order.
+- **Fixed selection reading on native Wayland apps:** Bloom now reads the native Wayland primary selection via `wl-paste --primary` when Electron's XWayland clipboard bridge returns empty. This fixes Read-Aloud failing to grab highlighted text in Firefox, Kate, and other Wayland-native apps.
+- **Fixed dictation clipboard on Wayland:** Dictation transcripts are now also written to the Wayland clipboard via `wl-copy`, ensuring manual Ctrl+V always works even when automated paste fails.
+- **Fixed misleading error messages:** The "Install xdotool or wtype" toast (shown even when both were installed) is replaced with an accurate message.
