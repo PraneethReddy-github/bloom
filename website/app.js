@@ -176,6 +176,26 @@ const I = {
   timer:    'M12 7.5v5l3.5 2M12 3.2a8.8 8.8 0 1 0 0 17.6 8.8 8.8 0 0 0 0-17.6Z',
   pause:    'M9.5 5.5v13M14.5 5.5v13',
   stop:     'M6.8 6.8h10.4v10.4H6.8z',
+  image:    'M4 5h16v14H4zM4 16.5l4.5-4.5 4 4 3-3 4.5 4.5M15.5 9.5h.01',
+  file:     'M6.5 3h7.5l4 4v14H6.5zM14 3v4.5h4',
+  wand:     'M5 19L14.5 9.5M14 4l1 2.2 2.2 1L15 8.2 14 10.4 13 8.2 10.8 7.2 13 6.2zM18.5 12.5l.7 1.5 1.5.7-1.5.7-.7 1.5-.7-1.5-1.5-.7 1.5-.7z',
+  package:  'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+  palette:  'M12 3.2a8.8 8.8 0 100 17.6c1.6 0 2.2-1.1 1.7-2.4-.5-1.3.4-2.4 1.8-2.4H17.5a3.5 3.5 0 003.5-3.5c0-5-4-9.3-9-9.3zM7.8 11.2h.01M10.6 7.8h.01M15 8.2h.01',
+  layers:   'M12 3.5l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 16.5l9 5 9-5',
+  wrench:   'M14.5 6.2a4 4 0 005 5L20.5 12l-8.8 8.8a2.2 2.2 0 01-3.1-3.1L17.4 9M14.5 6.2a4 4 0 014.3-.9l-2.4 2.4',
+  scissors: 'M6 8.2a2.7 2.7 0 100-5.4 2.7 2.7 0 000 5.4zM6 21.2a2.7 2.7 0 100-5.4 2.7 2.7 0 000 5.4zM20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12',
+  trend:    'M3.5 17l6-6 4 4 7-7.5M15 7.5h5.5V13',
+  refresh:  'M20 12a8 8 0 01-14.2 5M4 12a8 8 0 0114.2-5M18.5 3v4.5H14M5.5 21v-4.5H10',
+  repeat:   'M17 3l3.5 3.5L17 10M4 11V9.5A3 3 0 017 6.5h13.5M7 21l-3.5-3.5L7 14M20 13v1.5a3 3 0 01-3 3H3.5',
+  shield:   'M12 3l7.5 3v6c0 4.4-3 7.4-7.5 9-4.5-1.6-7.5-4.6-7.5-9V6z',
+  book:     'M5 4.5h10.5a3 3 0 013 3V20H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h10.5',
+  text:     'M5 6.5h14M5 11h14M5 15.5h9',
+  star:     'M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z',
+  square:   'M5 5h14v14H5z',
+  sliders:  'M4 7h9M17 7h3M4 17h3M11 17h9M13 4.5v5M7 14.5v5',
+  tag:      'M3.5 12.2V4.5h7.7L20.5 13.8 13.8 20.5zM8 8.3h.01',
+  video:    'M3.5 6.5h12v11h-12zM15.5 10.5l5-3v9l-5-3',
+  volxm:    'M4 9h3.5L12 5v14l-4.5-4H4zM15.8 9.6l4.6 4.8M20.4 9.6l-4.6 4.8',
   bloom:    ''
 };
 
@@ -206,10 +226,8 @@ const TREE = {
 // Replica of the real Bloom dial: a complete ring of contiguous pie-wedge
 // segments (annulus sectors) around the bud, bare icons sitting in each wedge —
 // matching renderer/bloom.js ringStyle:'dial', not floating circles.
-(function dialDemo() {
-  const wrap = $('#dialDemo');
-  const hint = $('#stageHint');
-  if (!wrap) return;
+function makeDial(wrap, hint, treeFn, opts = {}) {
+  if (!wrap || !hint) return null;
 
   const NS = 'http://www.w3.org/2000/svg';
   const el = (n, cls) => { const e = document.createElementNS(NS, n); if (cls) e.setAttribute('class', cls); return e; };
@@ -301,7 +319,7 @@ const TREE = {
     bud.innerHTML = '<span></span>';
 
     const nsB = base * 0.13, pad = base * 0.02, gap = base * 0.02, gapPx = base * 0.006, SHRINK = 0.88;
-    const levels = [TREE.children, ...path.map(p => p.children || [])];
+    const levels = [treeFn(), ...path.map(p => p.children || [])];
 
     // pass 1 — angles per level; a folder's ring fans around the wedge you opened
     const meta = [];
@@ -367,7 +385,15 @@ const TREE = {
           wg.appendChild(sub);
         }
 
-        wg.appendChild(iconG(node, cx + rMid * Math.cos(a), cy + rMid * Math.sin(a), ns * 0.52));
+        const ix = cx + rMid * Math.cos(a), iy = cy + rMid * Math.sin(a);
+        wg.appendChild(iconG(node, ix, iy - (opts.labels ? ns * 0.1 : 0), ns * (opts.labels ? 0.42 : 0.52)));
+        if (opts.labels) {   // the file ring names its petals: a dozen look-alike icons need it
+          const t = el('text', 'dial-lbl');
+          t.setAttribute('x', ix); t.setAttribute('y', iy + ns * 0.3); t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('font-size', Math.max(7, ns * 0.17).toFixed(1));
+          t.textContent = node.l.length > 12 ? node.l.slice(0, 11) + '…' : node.l;
+          wg.appendChild(t);
+        }
 
         wg.addEventListener('pointerenter', () => {
           if (bud._leaveTimer) clearTimeout(bud._leaveTimer);
@@ -413,7 +439,7 @@ const TREE = {
           const b = wg.getBoundingClientRect();
           petals.burst(b.left + b.width / 2, b.top + b.height / 2, node.children ? 10 : 20);
           if (node.children) { path = [...path.slice(0, lvl), node]; render(lvl + 1); say(`${node.l} — ${node.children.length} actions`, true); }
-          else { say(`Ran · ${node.l}`, true); }
+          else { say(node.msg || `Ran · ${node.l}`, true); }
         });
         ring.appendChild(wg);
       });
@@ -480,6 +506,7 @@ const TREE = {
   });
 
   document.addEventListener('click', (e) => {
+    if (opts.sticky) return;   // the file ring stays open while you pick a file type beside it
     if (open && !bud.contains(e.target) && !e.target.closest('.dial-wedge')) {
       open = false;
       path = [];
@@ -490,6 +517,7 @@ const TREE = {
 
   addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !open) return;
+    if (opts.sticky && !path.length) return;
     if (path.length) path.pop(); else open = false;
     render();
     say(open ? 'Back a layer' : 'Click the bud', true);
@@ -498,6 +526,128 @@ const TREE = {
   let rt;
   addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => render(), 160); });
 
+  if (opts.startOpen) { open = true; render(0); say(opts.openHint || 'Open a folder — the ring behind it dims'); }
+  return {
+    // the tree changed (another file type): start the ring over, keeping it open
+    reload(hintText) { path = []; render(open ? 0 : -1); if (hintText) say(hintText, true); }
+  };
+}
+
+makeDial($('#dialDemo'), $('#stageHint'), () => TREE.children);
+
+/* ─────────────  3b. file ring demo  ─────────────
+   The same ring, filled the way the real one is when a file is held over the bud. Orders and
+   labels mirror converters.js: tools first, then formats; dropping on the bud groups the formats. */
+
+(function fileRing() {
+  const wrap = $('#fileRing');
+  if (!wrap) return;
+
+  const n = (l, i, msg) => ({ l, i, msg });
+  const conv = (l, i = 'image') => n(l, i, `Saved photo.${l.toLowerCase()} next to the original`);
+  const studio = (items) => ({ l: 'Studio', i: 'palette', children: items.map(([l, i]) => n(l, i, `Opens ${l.replace('…', '')} in Studio`)) });
+  const folder = (l, i, kids) => ({ l, i, children: kids });
+
+  const KINDS = {
+    image: {
+      file: 'photo.jpg',
+      tools: () => [
+        studio([['Crop…', 'scissors'], ['Edit…', 'sliders'], ['Add BG…', 'palette'], ['Annotate…', 'pencil'], ['Redact…', 'shield'], ['Resize…', 'trend'], ['Compress…', 'package'], ['Info…', 'tag']]),
+        folder('Quick', 'wrench', [n('Square', 'square', 'Saved photo-crop-1x1.jpg'), n('16:9', 'square', 'Saved photo-crop-16x9.jpg'), n('Resize 50%', 'trend', 'Saved photo-50pct.jpg'),
+          n('Rotate', 'refresh', 'Saved photo-rotated.jpg'), n('Flip', 'repeat', 'Saved photo-flipped.jpg'), n('Black & white', 'moon', 'Saved photo-bw.jpg'), n('Strip location', 'shield', 'Saved photo-no-location.jpg')]),
+        n('Remove BG', 'wand', 'Saved photo-no-bg.png with a transparent background'),
+        n('Compress', 'package', 'Saved photo-compressed.webp · 2.4 MB → 310 KB (87% smaller)')
+      ],
+      formats: () => [conv('PNG'), conv('WebP'), conv('AVIF'), conv('PDF', 'file'), folder('More formats', 'layers', [conv('ICO', 'star'), conv('TIFF'), conv('BMP'), conv('GIF')])],
+      hold: 'Holding a photo over the bud: Studio, Quick tools, Remove BG and Compress come first, then the formats.',
+      drop: 'Dropped on the bud: Open and Copy path, then the same tools, with every format tucked under one Convert petal.'
+    },
+    pdf: {
+      file: 'contract.pdf',
+      tools: () => [
+        n('Studio', 'palette', 'Opens the PDF page editor'),
+        n('Compress', 'package', 'Saved contract-compressed.pdf · 5.1 MB → 1.2 MB'),
+        folder('Tools', 'wrench', [n('Split pages', 'scissors', 'Saved one PDF per page in a folder'), n('Rotate', 'refresh', 'Saved contract-rotated.pdf'),
+          n('Password…', 'lock', 'Asks for a password, then saves contract-protected.pdf (AES-256)'), n('Extract images', 'image', 'Saved every embedded picture in a folder'), n('Strip metadata', 'shield', 'Saved contract-clean.pdf')])
+      ],
+      formats: () => [conv('PNG'), conv('JPG'), conv('TXT', 'text'), conv('DOCX', 'book')],
+      hold: 'A PDF opens with Studio (the page editor) first, then Compress and a Tools folder, then the formats.',
+      drop: 'Dropped on the bud: Open, then Studio, Compress and Tools, with PNG, JPG, TXT and DOCX under Convert.'
+    },
+    video: {
+      file: 'clip.mp4',
+      tools: () => [n('Compress', 'package', 'Saved clip-compressed.mp4 · 180 MB → 42 MB'), folder('Tools', 'wrench', [n('720p', 'trend', 'Saved clip-720p.mp4'), n('Mute', 'volxm', 'Saved clip-muted.mp4')])],
+      formats: () => [conv('MP4', 'video'), conv('WebM', 'video'), conv('MKV', 'video'), conv('GIF'), conv('MP3', 'music')],
+      hold: 'A video: Compress and a small Tools folder, then MP4, WebM, MKV, GIF, or MP3 to keep just the audio.',
+      drop: 'Dropped on the bud: Open, Compress, Tools and one Convert petal.'
+    },
+    audio: {
+      file: 'song.flac',
+      tools: () => [],
+      formats: () => [conv('MP3', 'music'), conv('WAV', 'music'), conv('OGG', 'music'), conv('M4A', 'music')],
+      hold: 'Audio keeps it simple: the formats, straight on the first ring.',
+      drop: 'Dropped on the bud: Open, Open folder, Copy path and Convert.'
+    },
+    doc: {
+      file: 'notes.md',
+      tools: () => [],
+      formats: () => [conv('PDF', 'file'), conv('DOCX', 'book'), conv('HTML', 'code'), conv('TXT', 'text')],
+      hold: 'Word, Markdown, text, CSV and HTML files turn into each other. Headings, lists and tables carry over.',
+      drop: 'Dropped on the bud: Open, Open folder, Copy path and Convert.'
+    },
+    batch: {
+      file: '3 images',
+      tools: () => [],
+      formats: () => [n('One PDF', 'file', 'Saved photo-combined.pdf, one page per image'), conv('JPG'), conv('PNG'), conv('WebP'), n('Compress', 'package', 'Saved all three, compressed')],
+      hold: 'Drop several images together: combine them into one PDF, convert them all, or compress them all. PDFs offer Merge.',
+      drop: 'A batch always shows its own small ring: the actions apply to every file you dropped.',
+      batch: true
+    }
+  };
+
+  let kind = 'image', mode = 'hold';
+  const note = $('#fdNote');
+
+  function tree() {
+    const k = KINDS[kind], tools = k.tools(), formats = k.formats();
+    if (mode === 'hold' || k.batch) return [...tools, ...formats];
+    const first = [n('Open', 'file', `Opens ${k.file}`), n('Open folder', 'folder', 'Opens the folder it lives in'), n('Copy path', 'clipboard', 'Path copied to the clipboard')];
+    return [...first, ...tools, folder('Convert', 'refresh', formats)];
+  }
+
+  const dial = makeDial(wrap, $('#fileHint'), tree, { startOpen: true, sticky: true, labels: true, openHint: 'Open a folder, or pick a petal' });
+  const sync = () => { note.textContent = KINDS[kind][mode]; dial && dial.reload(`${KINDS[kind].file} — ${mode === 'hold' ? 'held over the bud' : 'dropped on the bud'}`); };
+
+  $$('.fd-type').forEach(b => b.addEventListener('click', () => {
+    kind = b.dataset.ft;
+    $$('.fd-type').forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-selected', x === b); });
+    sync();
+  }));
+  $$('.fd-mode').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.fm;
+    $$('.fd-mode').forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-pressed', x === b); });
+    sync();
+  }));
+  note.textContent = KINDS[kind][mode];
+})();
+
+/* ─────────────  3c. Studio preview  ───────────── */
+
+(function studioMock() {
+  const mock = $('#studioMock');
+  if (!mock) return;
+  const canvas = $('#smCanvas'), frame = $('#smFrame');
+  const ICON = k => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${I[k]}"/></svg>`;
+  $$('.sm-tool', mock).forEach(b => b.insertAdjacentHTML('afterbegin', ICON(b.dataset.ic)));
+
+  function pick(t) {
+    canvas.dataset.t = t;
+    frame.classList.toggle('is-bg', t === 'bg');
+    $$('.sm-tool', mock).forEach(b => { b.classList.toggle('is-on', b.dataset.t === t); b.setAttribute('aria-selected', b.dataset.t === t); });
+    $$('.sm-p', mock).forEach(p => p.classList.toggle('is-on', p.dataset.t === t));
+  }
+  $$('.sm-tool', mock).forEach(b => b.addEventListener('click', () => pick(b.dataset.t)));
+  pick('crop');
 })();
 
 /* ─────────────  4. hero title split  ───────────── */

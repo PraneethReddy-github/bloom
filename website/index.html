@@ -6,16 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloom — One bloom away.</title>
   <meta name="description"
-    content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — plus local Whisper dictation, native read-aloud, a pomodoro ring around the bud, an Eisenhower task board, and a Garden that finds everyone running Bloom on your network for encrypted one-to-one messages and shared tasks. Windows &amp; Linux. MIT." />
+    content="A floating bud on your desktop. Click it and a dial of every app, link, terminal, script and system toggle opens around it — drag any file onto it to convert it or edit it (images, PDFs, documents, audio, video, with background removal and a built-in image and PDF editor, all offline), plus local Whisper dictation, native read-aloud, a pomodoro ring around the bud, an Eisenhower task board, and a Garden that finds everyone running Bloom on your network for encrypted one-to-one messages and shared tasks. Windows &amp; Linux. MIT." />
   <meta property="og:title" content="Bloom — One bloom away." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://bloom-dial.web.app/" />
   <meta property="og:description"
-    content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Local voice, a focus timer, a task matrix, and a LAN garden of the people around you — end-to-end encrypted." />
+    content="A floating bud on your desktop. Click it and a dial of everything you use opens around it. Drop a file on the bud to convert or edit it, offline. Local voice, a focus timer, a task matrix, and a LAN garden of the people around you." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Bloom — One bloom away." />
   <meta name="twitter:description"
-    content="A dial of everything you use, one click from anywhere. Local voice, a focus ring, a task board, and encrypted messaging with whoever else is on your network." />
+    content="A dial of everything you use, one click from anywhere. Drop a file on the bud to convert or edit it, fully offline. Local voice, a focus ring, a task board, and encrypted messaging on your network." />
   <meta name="theme-color" content="#08080a" />
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='228' fill='%2308080a'/%3E%3Cg fill='none' stroke='%23f1ede6' stroke-width='30'%3E%3Ccircle cx='512' cy='386.1' r='140.3'/%3E%3Ccircle cx='633.7' cy='474.55' r='140.3'/%3E%3Ccircle cx='587.34' cy='617.9' r='140.3'/%3E%3Ccircle cx='436.67' cy='617.9' r='140.3'/%3E%3Ccircle cx='390.31' cy='474.55' r='140.3'/%3E%3C/g%3E%3C/svg%3E" />
@@ -46,6 +46,7 @@
         <a href="#dial">The dial</a>
         <a href="#voice">Voice</a>
         <a href="#actions">Actions</a>
+        <a href="#files">Files</a>
         <a href="#focus">Focus</a>
         <a href="#garden">Garden</a>
         <a href="#keys">Hotkeys</a>
@@ -73,6 +74,7 @@
     <a href="#dial">The dial</a>
     <a href="#voice">Voice</a>
     <a href="#actions">Actions</a>
+    <a href="#files">Files</a>
     <a href="#focus">Focus &amp; tasks</a>
     <a href="#garden">Garden</a>
     <a href="#keys">Hotkeys</a>
@@ -112,6 +114,7 @@
           <ul class="hero-facts">
             <li><strong>12</strong><span>action types</span></li>
             <li><strong>16</strong><span>system toggles built in</span></li>
+            <li><strong>30+</strong><span>file tools, all offline</span></li>
             <li><strong>1</strong><span>bud, infinite possibilities</span></li>
           </ul>
         </div>
@@ -137,11 +140,13 @@
         <span>Open File</span><i>✿</i><span>Custom
           Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i><span>Focus
           Timer</span><i>✿</i><span>Bloom</span><i>✿</i><span>Garden</span><i>✿</i>
+        <span>Convert Files</span><i>✿</i><span>Remove Background</span><i>✿</i><span>Studio</span><i>✿</i><span>PDF Pages</span><i>✿</i>
         <span>Launch App</span><i>✿</i><span>Open URL</span><i>✿</i><span>Terminal Profile</span><i>✿</i>
         <span>System Toggle</span><i>✿</i><span>Media Keys</span><i>✿</i><span>Snippets</span><i>✿</i>
         <span>Open File</span><i>✿</i><span>Custom
           Script</span><i>✿</i><span>Webhook</span><i>✿</i><span>Macro</span><i>✿</i><span>Focus
           Timer</span><i>✿</i><span>Bloom</span><i>✿</i><span>Garden</span><i>✿</i>
+        <span>Convert Files</span><i>✿</i><span>Remove Background</span><i>✿</i><span>Studio</span><i>✿</i><span>PDF Pages</span><i>✿</i>
       </div>
     </div>
 
@@ -184,8 +189,8 @@
           <p>Edit Actions · Settings · Pin position · Do Not Disturb · Quit. No hunting through a preferences maze.</p>
         </article>
         <article class="g-card" data-tilt><span class="g-tag">Drop a file</span>
-          <h3>Three-node ring</h3>
-          <p>Drag any file onto the bud: Open · Open containing folder · Copy path.</p>
+          <h3>Convert it, edit it</h3>
+          <p>Hold a file over the bud and the ring opens with what it can become. Drop it on a petal, or on the bud to browse first.</p>
         </article>
         <article class="g-card wide" data-tilt><span class="g-tag">Rest on it</span>
           <h3>Read what's waiting</h3>
@@ -370,8 +375,8 @@
         </article>
         <article class="act" data-tilt><span class="act-n">12</span>
           <h3>Bloom</h3>
-          <p>Bloom's own doors, as ordinary nodes: the settings window, the command palette, the task board. Two of
-            them sit on your dial the day you install it.</p>
+          <p>Bloom's own doors, as ordinary nodes: the settings window, the command palette, the task board, and Studio, the
+            image and PDF editor. Three of them sit on your dial the day you install it.</p>
         </article>
       </div>
 
@@ -392,10 +397,234 @@
       </div>
     </section>
 
+    <!-- ─────────────────────────────  FILES  ───────────────────────────── -->
+    <section class="section" id="files">
+      <div class="head reveal">
+        <p class="kicker">05 — Files</p>
+        <h2>Drop a file on the bud. <em>Decide what it becomes.</em></h2>
+        <p class="lede">Drag any file toward the bud and the ring opens with what that file can turn into, plus the tools
+          for it. Drop it on a petal and the result lands next to the original. Or drop it on the bud and browse every
+          option first. It all runs on your machine: nothing is uploaded, and the converters ship inside Bloom.</p>
+      </div>
+
+      <div class="files-demo reveal">
+        <div class="fd-side">
+          <p class="fd-label">Try it with</p>
+          <div class="fd-types" role="tablist" aria-label="File type">
+            <button class="fd-type is-on" role="tab" aria-selected="true" data-ft="image">Image</button>
+            <button class="fd-type" role="tab" aria-selected="false" data-ft="pdf">PDF</button>
+            <button class="fd-type" role="tab" aria-selected="false" data-ft="video">Video</button>
+            <button class="fd-type" role="tab" aria-selected="false" data-ft="audio">Audio</button>
+            <button class="fd-type" role="tab" aria-selected="false" data-ft="doc">Document</button>
+            <button class="fd-type" role="tab" aria-selected="false" data-ft="batch">Several files</button>
+          </div>
+          <p class="fd-label">Then</p>
+          <div class="fd-modes">
+            <button class="fd-mode is-on" aria-pressed="true" data-fm="hold">
+              <b>Hold it over the bud</b>
+              <span>The ring opens under the file. Drop on the exact petal you want, even a folder's inner ring.</span>
+            </button>
+            <button class="fd-mode" aria-pressed="false" data-fm="drop">
+              <b>Drop it on the bud</b>
+              <span>Browse first: Open, Studio, Quick tools and one Convert petal, all on the first layer.</span>
+            </button>
+          </div>
+          <p class="fd-note" id="fdNote"></p>
+        </div>
+
+        <div class="stage-frame fd-stage">
+          <div class="stage-label"><span class="live-dot"></span> Live — click the bud, then a petal</div>
+          <div class="dial" id="fileRing" role="group" aria-label="Interactive file ring demo"></div>
+          <div class="stage-hint" id="fileHint">Click the bud</div>
+        </div>
+      </div>
+
+      <div class="cv-grid reveal">
+        <article class="cv" data-tilt>
+          <h3>Images</h3>
+          <p class="cv-from">PNG · JPG · WebP · AVIF · GIF · BMP · ICO · SVG · HEIC · TIFF</p>
+          <div class="cv-row"><span class="cv-tag">Becomes</span>
+            <div class="chips sm"><span>PNG</span><span>JPG</span><span>WebP</span><span>AVIF</span><span>PDF</span><span>ICO</span><span>TIFF</span><span>BMP</span><span>GIF</span></div>
+          </div>
+          <div class="cv-row"><span class="cv-tag">Tools</span>
+            <div class="chips sm"><span>Remove background</span><span>Crop</span><span>Resize</span><span>Rotate</span><span>Flip</span><span>Black &amp; white</span><span>Compress</span><span>Strip location</span><span>Studio</span></div>
+          </div>
+        </article>
+        <article class="cv" data-tilt>
+          <h3>PDFs</h3>
+          <p class="cv-from">Any PDF, including multi-page</p>
+          <div class="cv-row"><span class="cv-tag">Becomes</span>
+            <div class="chips sm"><span>PNG per page</span><span>JPG per page</span><span>TXT</span><span>DOCX</span></div>
+          </div>
+          <div class="cv-row"><span class="cv-tag">Tools</span>
+            <div class="chips sm"><span>Page editor</span><span>Compress</span><span>Split pages</span><span>Rotate</span><span>Password (AES-256)</span><span>Extract images</span><span>Strip metadata</span></div>
+          </div>
+        </article>
+        <article class="cv" data-tilt>
+          <h3>Documents</h3>
+          <p class="cv-from">DOCX · Markdown · TXT · CSV · HTML</p>
+          <div class="cv-row"><span class="cv-tag">Becomes</span>
+            <div class="chips sm"><span>PDF</span><span>DOCX</span><span>HTML</span><span>TXT</span></div>
+          </div>
+          <p class="cv-note">Headings, lists and tables carry over. CSV becomes a real table.</p>
+        </article>
+        <article class="cv" data-tilt>
+          <h3>Audio</h3>
+          <p class="cv-from">MP3 · WAV · FLAC · OGG · M4A · AAC · Opus</p>
+          <div class="cv-row"><span class="cv-tag">Becomes</span>
+            <div class="chips sm"><span>MP3</span><span>WAV</span><span>FLAC</span><span>OGG</span><span>M4A</span></div>
+          </div>
+        </article>
+        <article class="cv" data-tilt>
+          <h3>Video</h3>
+          <p class="cv-from">MP4 · MKV · MOV · WebM · AVI</p>
+          <div class="cv-row"><span class="cv-tag">Becomes</span>
+            <div class="chips sm"><span>MP4</span><span>WebM</span><span>MKV</span><span>GIF</span><span>MP3 (audio only)</span></div>
+          </div>
+          <div class="cv-row"><span class="cv-tag">Tools</span>
+            <div class="chips sm"><span>Compress</span><span>720p</span><span>Mute</span></div>
+          </div>
+        </article>
+        <article class="cv" data-tilt>
+          <h3>Several at once</h3>
+          <p class="cv-from">Drop a batch of images or PDFs together</p>
+          <div class="cv-row"><span class="cv-tag">Makes</span>
+            <div class="chips sm"><span>One PDF from images</span><span>Merged PDF</span><span>Convert all</span><span>Compress all</span></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="studio reveal" id="studio">
+        <div class="studio-copy">
+          <p class="kicker sm">Studio</p>
+          <h3>A real image editor, one petal away.</h3>
+          <p>Open it from the Studio petal on your ring, or from any image's own Studio folder. It works on a
+            full-resolution copy in memory, so your original is never touched, and saves next to it. Every change has
+            an undo.</p>
+          <p class="studio-hint">Pick a tool on the left of the preview.</p>
+        </div>
+
+        <figure class="stm" id="studioMock" aria-label="Preview of the Studio image editor">
+          <div class="sm-top"><span class="sm-dots"><i></i><i></i><i></i></span><span class="sm-title">Studio · sunset.jpg</span></div>
+          <div class="sm-body">
+            <div class="sm-rail" role="tablist" aria-label="Studio tools">
+              <button class="sm-tool is-on" role="tab" aria-selected="true" data-t="crop" data-ic="scissors"><span>Crop</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="edit" data-ic="sliders"><span>Edit</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="bg" data-ic="palette"><span>Add BG</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="annotate" data-ic="pencil"><span>Annotate</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="redact" data-ic="shield"><span>Redact</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="resize" data-ic="trend"><span>Resize</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="compress" data-ic="package"><span>Compress</span></button>
+              <button class="sm-tool" role="tab" aria-selected="false" data-t="info" data-ic="tag"><span>Info</span></button>
+            </div>
+
+            <div class="sm-stage">
+              <div class="sm-frame" id="smFrame">
+                <div class="sm-canvas" id="smCanvas">
+                  <i class="sm-sun"></i><i class="sm-hill h1"></i><i class="sm-hill h2"></i>
+                  <div class="sm-sign"><b></b><b></b><b></b></div>
+
+                  <div class="sm-ov ov-crop"><i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i><em>1:1 · 1080 × 1080</em></div>
+                  <div class="sm-ov ov-annot">
+                    <svg viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="smArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff5a4d"/></marker></defs><path d="M22 14 L46 30" stroke="#ff5a4d" stroke-width="1.4" fill="none" marker-end="url(#smArrow)"/></svg>
+                    <span class="an-box"></span><span class="an-step">1</span><span class="an-text">Golden hour</span>
+                  </div>
+                  <div class="sm-ov ov-redact"><span class="rd-black"></span><span class="rd-pix"></span></div>
+                  <div class="sm-ov ov-badge b-resize">1200 × 750 <i>→</i> 600 × 375</div>
+                  <div class="sm-ov ov-badge b-comp">2.4 MB <i>→</i> 310 KB · <b>87% smaller</b></div>
+                  <div class="sm-ov ov-badge b-info">GPS 12.97° N, 77.59° E</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sm-panel">
+              <div class="sm-p is-on" data-t="crop">
+                <h4>Crop</h4>
+                <p>Free or locked ratios: 1:1, 4:3, 3:2, 16:9, 9:16, 4:5. Drag the corners, see the pixel size live, rotate in quarter turns.</p>
+                <div class="sm-chips"><span class="on">Free</span><span>1:1</span><span>4:3</span><span>16:9</span><span>9:16</span></div>
+              </div>
+              <div class="sm-p" data-t="edit">
+                <h4>Edit</h4>
+                <div class="sm-sl"><label>Brightness</label><i style="--v:62%"></i></div>
+                <div class="sm-sl"><label>Contrast</label><i style="--v:56%"></i></div>
+                <div class="sm-sl"><label>Saturation</label><i style="--v:68%"></i></div>
+                <div class="sm-sl"><label>Warmth</label><i style="--v:60%"></i></div>
+                <p>Auto fix, black &amp; white, flip, rotate, and hold to compare with the original.</p>
+              </div>
+              <div class="sm-p" data-t="bg">
+                <h4>Add background</h4>
+                <div class="sm-sw"><i style="background:linear-gradient(135deg,#ff9a5a,#ff3d6e,#7b5cff)"></i><i style="background:linear-gradient(135deg,#2193b0,#6dd5ed)"></i><i style="background:linear-gradient(135deg,#00c9a7,#845ec2)"></i><i style="background:#f4f4f5"></i><i style="background:#111"></i></div>
+                <p>Gradient or solid, with padding, rounded corners, shadow, angle and canvas ratio. Pairs with Remove BG.</p>
+              </div>
+              <div class="sm-p" data-t="annotate">
+                <h4>Annotate</h4>
+                <div class="sm-chips"><span class="on">Arrow</span><span>Box</span><span>Step</span><span>Text</span><span>Marker</span></div>
+                <p>Numbered steps count up for you. Each mark is saved straight into the picture, and Undo takes it back.</p>
+              </div>
+              <div class="sm-p" data-t="redact">
+                <h4>Redact</h4>
+                <div class="sm-chips"><span class="on">Black</span><span>Blur</span><span>Pixelate</span></div>
+                <p>Drag a box over anything private. It is burned into the pixels, and blur is strong enough that text cannot be recovered.</p>
+              </div>
+              <div class="sm-p" data-t="resize">
+                <h4>Resize</h4>
+                <p>By pixels or percent, with proportions kept. Or fit within 3840, 2560, 1920, 1280, 800 or 512 pixels.</p>
+              </div>
+              <div class="sm-p" data-t="compress">
+                <h4>Compress</h4>
+                <div class="sm-chips"><span>Quality</span><span class="on">Target size</span></div>
+                <div class="sm-chips"><span>2 MB</span><span>1 MB</span><span class="on">500 KB</span><span>200 KB</span></div>
+                <p>Make it under a size and Bloom finds the quality, shrinking the picture only if it must.</p>
+              </div>
+              <div class="sm-p" data-t="info">
+                <h4>Info</h4>
+                <dl><dt>Camera</dt><dd>Pixel 8</dd><dt>Taken</dt><dd>6 Nov, 18:42</dd><dt>Location</dt><dd>12.97° N, 77.59° E</dd></dl>
+                <p>See what a photo carries, open the spot on a map, then save a copy without the location or without any metadata.</p>
+              </div>
+            </div>
+          </div>
+        </figure>
+      </div>
+
+      <div class="pdfed reveal">
+        <figure class="pm" aria-label="Preview of the Studio PDF page editor">
+          <div class="sm-top"><span class="sm-dots"><i></i><i></i><i></i></span><span class="sm-title">Studio · contract.pdf · 6 pages</span></div>
+          <div class="pm-tools"><span>Select all</span><span class="sep"></span><span>⟲</span><span>⟳</span><span>Duplicate</span><span class="del">Delete</span><span class="sep"></span><span>Add pages…</span></div>
+          <div class="pm-grid">
+            <div class="pm-pg"><div class="pm-sheet"><b></b><s></s><s></s><s></s></div><em>1</em></div>
+            <div class="pm-pg on"><div class="pm-sheet turned"><b></b><s></s><s></s><s></s></div><em>2</em></div>
+            <div class="pm-pg drop"><div class="pm-sheet"><b></b><s></s><s></s></div><em>3</em></div>
+            <div class="pm-pg"><div class="pm-sheet"><b></b><s></s><s></s><s></s></div><em>4</em></div>
+            <div class="pm-pg"><span class="pm-from">appendix.pdf</span><div class="pm-sheet"><b></b><s></s><s></s></div><em>5</em></div>
+            <div class="pm-pg ghost"><div class="pm-sheet"><b></b><s></s><s></s><s></s></div><em>6</em></div>
+          </div>
+        </figure>
+
+        <div class="pdfed-copy">
+          <p class="kicker sm">Studio · PDFs</p>
+          <h3>The same editor, for pages.</h3>
+          <ul class="tick">
+            <li>Drag pages to reorder them. A selected page drags the whole selection.</li>
+            <li>Rotate, delete or duplicate any page, one at a time or a whole selection.</li>
+            <li>Add pages from other PDFs or images. Drag files in from your file manager and they land where you drop them.</li>
+            <li>Save everything, or only the selected pages as a new PDF. The original stays as it was.</li>
+            <li>One-tap extras on the PDF ring: Split, Compress, Password (AES-256), Extract images, Strip metadata.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="fnotes reveal">
+        <div class="fnote"><b>Fully offline</b><p>FFmpeg, the background-removal model and the PDF engines are bundled. No install, no upload, no account.</p></div>
+        <div class="fnote"><b>Never overwrites</b><p>Results land beside the original, or in a Bloom folder if you prefer. A name clash becomes <code>photo (1).jpg</code>, never a replacement.</p></div>
+        <div class="fnote"><b>Undo last conversion</b><p>Right-click the bud and it moves the last result to your trash. Each result also says what changed: <code>2.4 MB → 610 KB</code>.</p></div>
+        <div class="fnote"><b>Honest limits</b><p>PDF to DOCX keeps text, not layout. Password-protected PDFs can't be edited. Doc, ODT, PPTX and XLSX are not supported.</p></div>
+      </div>
+    </section>
+
     <!-- ─────────────────────────────  FOCUS & TASKS  ───────────────────────────── -->
     <section class="section" id="focus">
       <div class="head reveal">
-        <p class="kicker">05 — Focus &amp; tasks</p>
+        <p class="kicker">06 — Focus &amp; tasks</p>
         <h2>A timer you read <em>without looking away.</em></h2>
         <p class="lede">Pick a block from the dial and it draws itself around the bud. No extra window,
           no browser tab, nothing new in your taskbar — just the thing already on your screen,
@@ -518,7 +747,7 @@
     <!-- ─────────────────────────────  GARDEN  ───────────────────────────── -->
     <section class="section band" id="garden">
       <div class="head reveal">
-        <p class="kicker">06 — The garden</p>
+        <p class="kicker">07 — The garden</p>
         <h2>The people at the other desks. <em>No server in the middle.</em></h2>
         <p class="lede">Open Bloom on an office network and everyone else running it appears — no accounts,
           no sign-in, nothing leaving the building. Message them, look at what they're working on, hand
@@ -609,7 +838,7 @@
     <!-- ─────────────────────────────  HOTKEYS  ───────────────────────────── -->
     <section class="section" id="keys">
       <div class="head reveal">
-        <p class="kicker">07 — Global hotkeys</p>
+        <p class="kicker">08 — Global hotkeys</p>
         <h2>Never touch the bud <em>at all.</em></h2>
         <p class="lede">Four global bindings, live even with the bud hidden in the tray. Every one is
           rebindable, and the two voice ones can be cleared away entirely if you never use them.</p>
@@ -668,7 +897,7 @@
     <!-- ─────────────────────────────  SETTINGS  ───────────────────────────── -->
     <section class="section band" id="settings">
       <div class="head reveal">
-        <p class="kicker">08 — Settings</p>
+        <p class="kicker">09 — Settings</p>
         <h2>Eight tabs. <em>Then get out of the way.</em></h2>
         <p class="lede">A proper resizable window — not the transient dial — for the rare moments you
           actually need to edit something.</p>
@@ -729,8 +958,8 @@
               switching never repaints the app. The four <strong>starter templates</strong> live here too.</p>
           </div>
           <div class="tab-panel" id="t-general" role="tabpanel">
-            <h3>Startup, and getting your setup out.</h3>
-            <p>Launch at login (on by default the first run, off in one click) and whether the bud shows on start.
+            <h3>Startup, file tools, and getting your setup out.</h3>
+            <p>Launch at login (on by default the first run, off in one click) and whether the bud shows on start. A <strong>File tools</strong> section sets where converted files go (beside the original or in a Bloom folder), the image quality, and the resolution for PDF to image.
               Then the way out: <strong>export your whole configuration</strong> to a JSON file and import it on
               another machine, the path to that file spelled out, and a reset-to-defaults you have to mean.</p>
           </div>
@@ -779,7 +1008,7 @@
     <!-- ─────────────────────────────  CRAFT  ───────────────────────────── -->
     <section class="section" id="craft">
       <div class="head reveal">
-        <p class="kicker">09 — Under it all</p>
+        <p class="kicker">10 — Under it all</p>
         <h2>The boring parts, <em>done properly.</em></h2>
       </div>
 
@@ -817,6 +1046,11 @@
             there to bring the bud back from hiding.</p>
         </article>
         <article class="c-card" data-tilt>
+          <h3>Converters that ship inside</h3>
+          <p>FFmpeg for audio and video, a small segmentation model for background removal, PDF and image engines
+            for the rest. Bloom never asks you to install LibreOffice or ImageMagick, and a file never leaves the machine.</p>
+        </article>
+        <article class="c-card" data-tilt>
           <h3>Nothing leaves your network</h3>
           <p>No telemetry, no account, no cloud. Bloom makes three kinds of network call and you can name all
             three: the update check you can switch off, the one-time voice model download, and Garden — which
@@ -828,9 +1062,9 @@
     <!-- ─────────────────────────────  DOWNLOAD  ───────────────────────────── -->
     <section class="section band" id="download">
       <div class="head reveal">
-        <p class="kicker">10 — Get Bloom</p>
+        <p class="kicker">11 — Get Bloom</p>
         <h2>Grab the build <em>for your desktop.</em></h2>
-        <p class="lede">The Linux window tooling comes with the package. The Whisper model fetches itself the
+        <p class="lede">The Linux window tooling and every file converter come with the package. The Whisper model fetches itself the
           first time you dictate, once, and never again. Nothing to configure either way.</p>
       </div>
 
@@ -897,6 +1131,7 @@
       <nav class="f-links" aria-label="Footer">
         <a href="https://github.com/Praneethreddy-github/bloom" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/Praneethreddy-github/bloom/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/Praneethreddy-github/bloom/blob/main/RELEASE_NOTES.md" target="_blank" rel="noopener">Release notes</a>
         <a href="https://github.com/Praneethreddy-github/bloom/issues" target="_blank" rel="noopener">Issues</a>
         <a href="https://github.com/Praneethreddy-github/bloom/blob/main/LICENSE" target="_blank" rel="noopener">MIT
           Licence</a>
