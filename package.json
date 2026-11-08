@@ -38,5 +38,10 @@
   },
   "optionalDependencies": {
     "electron-updater": "^6.3.9"
+  },
+  "overrides": {
+    "@xenova/transformers": {
+      "sharp": "$sharp"
+    }
   }
 }
