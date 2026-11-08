@@ -252,19 +252,25 @@
     cmd('wheel', { dir: e.deltaY > 0 ? 1 : -1 });
   }, { passive: false });
 
-  // file drop → contextual mini-ring
-  ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => {
+  // file drag/drop → convert ring. While dragging, Chromium shows the type but not the path, so
+  // hovering a file over the bud asks main to bloom the tools for that type; the drop itself lands on
+  // a petal in the overlay. A drop straight on the bud opens the full file ring.
+  let hoverSent = false;
+  document.addEventListener('dragenter', e => { e.preventDefault(); budEl.classList.add('dropready'); });
+  document.addEventListener('dragover', e => {
     e.preventDefault();
-    budEl.classList.add('dropready');
-  }));
+    const items = [...(e.dataTransfer.items || [])].filter(i => i.kind === 'file');
+    if (hoverSent || !items.length) return;
+    hoverSent = true;
+    cmd('drag-hover', { mimes: items.map(i => i.type) });   // read now: Chromium blanks drag data once this handler returns
+  });
   document.addEventListener('dragleave', () => budEl.classList.remove('dropready'));
   document.addEventListener('drop', e => {
     e.preventDefault();
     budEl.classList.remove('dropready');
-    const f = e.dataTransfer.files[0];
-    if (!f) return;
-    const p = window.bloom.filePath(f);
-    if (p) cmd('drop', { path: p });
+    hoverSent = false;
+    const paths = [...e.dataTransfer.files].map(f => window.bloom.filePath(f)).filter(Boolean);
+    if (paths.length) cmd('drop', { paths });
   });
 
   // If this window holds focus while the ring is open, forward nav keys to the overlay.
@@ -282,6 +288,7 @@
   window.bloom.on('bud-conceal', on => document.body.classList.toggle('conceal', !!on));
   window.bloom.on('ui-flags', f => {
     ringOpen = !!f.ringOpen;
+    if (!ringOpen) hoverSent = false;   // a closed ring can bloom again for the next hover
     document.body.classList.toggle('open', ringOpen);
     if (ringOpen) { setTip(false); cancelDwell(); }   // the dial owns the bud's surroundings while it's open
     else armDwell();

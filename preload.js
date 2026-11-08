@@ -63,6 +63,18 @@ contextBridge.exposeInMainWorld('bloom', {
   trayIcon: (dataURL) => ipcRenderer.send('tray-icon', dataURL),
   filePath: (file) => { try { return webUtils.getPathForFile(file); } catch { return null; } },
 
+  // studio (image editor window) and file-tool results
+  studioLoad: () => ipcRenderer.invoke('studio-load'),
+  studioSave: (o) => ipcRenderer.invoke('studio-save', o),
+  studioOp: (op) => ipcRenderer.invoke('studio-op', op),
+  pdfThumb: (o) => ipcRenderer.invoke('pdf-thumb', o),            // -> JPEG bytes for one page
+  pdfAdd: () => ipcRenderer.invoke('pdf-add'),                      // native picker -> {added, errors}
+  pdfAddFiles: (files) => ipcRenderer.invoke('pdf-add-files', files),   // dropped files -> {added, errors}
+  pdfSave: (o) => ipcRenderer.invoke('pdf-save', o),                // {pages:[{src,idx,rot}], part?}
+  studioOpen: (file) => ipcRenderer.invoke('studio-open', file),   // no file -> native picker
+  convertUndo: () => ipcRenderer.invoke('convert-undo'),
+  promptDone: (v) => ipcRenderer.send('prompt-done', v),
+
   // bud window plumbing
   budCmd: (payload) => ipcRenderer.send('bud-cmd', payload),
 

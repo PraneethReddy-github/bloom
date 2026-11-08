@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloom Studio</title>
+  <link rel="stylesheet" href="settings.css?v=3">
+  <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+  <div id="st-app">
+    <header id="st-top">
+      <div class="st-brand"><span id="st-glyph" aria-hidden="true"></span><b>Studio</b><span id="st-file"></span></div>
+      <button class="btn btn-sm btn-ghost" id="st-openbtn">Open…</button>
+      <div class="st-win">
+        <button id="st-min" aria-label="Minimize">&#8211;</button>
+        <button id="st-max" aria-label="Maximize">&#9633;</button>
+        <button id="st-close" class="st-x" aria-label="Close">&#10005;</button>
+      </div>
+    </header>
+
+    <div id="st-empty" hidden>
+      <div class="st-drop">
+        <span id="st-empty-logo" aria-hidden="true"></span>
+        <h2>Drop an image or PDF to start</h2>
+        <p>Images: PNG, JPG, WebP, AVIF, HEIC, TIFF, GIF, BMP, SVG · PDFs open the page editor</p>
+        <button class="btn btn-primary" id="st-emptybtn">Open an image…</button>
+      </div>
+    </div>
+
+    <div id="pg-shell" hidden>
+      <div id="pg-tools">
+        <button class="btn btn-sm" id="pg-all">Select all</button>
+        <span class="pg-sep"></span>
+        <button class="btn btn-sm" id="pg-rl" title="Rotate left (Shift+R)">⟲</button>
+        <button class="btn btn-sm" id="pg-rr" title="Rotate right (R)">⟳</button>
+        <button class="btn btn-sm" id="pg-dup" title="Duplicate">Duplicate</button>
+        <button class="btn btn-sm btn-danger" id="pg-del" title="Delete (Del)">Delete</button>
+        <span class="pg-sep"></span>
+        <button class="btn btn-sm" id="pg-add">Add pages…</button>
+        <span class="st-grow"></span>
+        <label class="pg-zoom">Size <input id="pg-zoom" type="range" min="110" max="300" value="190"></label>
+      </div>
+      <div id="pg-grid" role="listbox" aria-label="Pages" aria-multiselectable="true"></div>
+    </div>
+
+    <div id="st-shell">
+      <nav id="st-tools" aria-label="Tools"></nav>
+      <main id="st-stage">
+        <canvas id="st-view"></canvas>
+        <canvas id="st-over"></canvas>
+        <input id="st-text" type="text" placeholder="Type, then Enter" hidden>
+        <div id="st-hint"></div>
+      </main>
+      <aside id="st-panel"></aside>
+    </div>
+
+    <footer id="st-bar">
+      <button class="btn btn-sm" id="st-undo">Undo</button>
+      <button class="btn btn-sm btn-ghost" id="st-reset">Reset</button>
+      <span id="st-dims"></span>
+      <span class="st-grow"></span>
+      <span id="st-status"></span>
+      <button class="btn btn-sm" id="st-copy">Copy</button>
+      <button class="btn btn-sm" id="st-savesel" hidden>Save selected as PDF</button>
+      <button class="btn btn-sm btn-primary" id="st-save">Save</button>
+    </footer>
+  </div>
+  <script src="icons.js"></script>
+  <script src="studio-pdf.js"></script>
+  <script src="studio.js"></script>
+</body>
+</html>

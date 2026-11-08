@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const cp = require('child_process');
 const store = require('./config');
+const converters = require('./converters');
 const { Garden, AVATARS } = require('./garden');
 
 const IS_WIN = process.platform === 'win32';
@@ -105,10 +106,14 @@ function createBudWin() {
     // focusable:false so clicking the bud never steals focus from the app the
     // user is typing in — that's what lets dictation paste land at their cursor
     // and read-aloud grab their real selection. The overlay owns ring keyboard nav.
-    alwaysOnTop: true, focusable: false, show: false,
+    alwaysOnTop: true, focusable: IS_LINUX, show: false,
     backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
+  // On Linux, creating the window with focusable:false makes it an override-redirect X window,
+  // and KWin never hands it drags from native-Wayland apps (Dolphin). So create it as a normal
+  // window and drop focusability afterwards: drags arrive, clicks still never steal focus.
+  if (IS_LINUX) budWin.setFocusable(false);
   budWin.setAlwaysOnTop(true, 'screen-saver');
   budWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   budWin.setMenuBarVisibility(false);
@@ -1063,9 +1068,11 @@ async function execute(node) {
         if (p.cmd === 'settings') { createSettings(); result = { ok: true }; }
         else if (p.cmd === 'palette') { summonPalette(); result = { ok: true }; }
         else if (p.cmd === 'tasks') { createSettings('focus', 'tasks'); result = { ok: true }; }
+        else if (p.cmd === 'studio') result = await openStudio(null);
         else result = { ok: false, error: `unknown bloom command "${p.cmd}"` };
         break;
       }
+      case 'convert': result = await convertFile(p); break;
       case 'folder': result = { ok: false, error: 'folders open rings, they do not execute' }; break;
       default: result = { ok: false, error: `unknown action type "${node.type}"` };
     }
@@ -1074,6 +1081,123 @@ async function execute(node) {
   }
   broadcast('exec-feedback', { nodeId: node.id, label: node.label, ok: result.ok, error: result.error, note: result.note });
   return result;
+}
+
+// ---- file conversion ----
+// HTML -> PDF needs a layout engine, and Electron already ships one.
+async function printPdf(html) {
+  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
+  try {
+    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+    return await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4' });
+  } finally { win.destroy(); }
+}
+
+// Toast in the overlay (reuses the exec-feedback channel).
+function fileToast(text, ok = true) {
+  if (!overlay) return;
+  uiFlags.displayOnly = true; applyOverlayState();
+  overlay.webContents.send('exec-feedback', { nodeId: ok ? '__convert' : null, label: 'Convert', ok, note: text, error: ok ? undefined : text });
+}
+
+const human = n => n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB';
+const sizeOf = f => { try { const st = fs.statSync(f); return st.isFile() ? st.size : 0; } catch { return 0; } };
+
+// Results of recent runs, newest last, so "Undo last conversion" can move them to the trash.
+const undoStack = [];
+const remember = outs => { undoStack.push(outs); if (undoStack.length > 10) undoStack.shift(); };
+async function undoLast() {
+  const outs = undoStack.pop();
+  if (!outs) { fileToast('Nothing to undo', false); return { ok: false }; }
+  for (const f of outs) { try { await shell.trashItem(f); } catch { /* already gone */ } }
+  fileToast(`Moved ${outs.length > 1 ? outs.length + ' files' : path.basename(outs[0])} to the trash`);
+  return { ok: true };
+}
+
+// A small password dialog; resolves with the text, or null if cancelled.
+function askPassword() {
+  return new Promise(resolve => {
+    const win = new BrowserWindow({
+      width: 380, height: 210, resizable: false, minimizable: false, maximizable: false, frame: false, alwaysOnTop: true,
+      backgroundColor: '#0b0b0c', title: 'Bloom', skipTaskbar: true,
+      webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+    });
+    win.setAlwaysOnTop(true, 'screen-saver', 1);
+    let answer = null;
+    const onDone = (e, v) => { if (e.sender === win.webContents) { answer = v; win.close(); } };
+    ipcMain.on('prompt-done', onDone);
+    win.on('closed', () => { ipcMain.removeListener('prompt-done', onDone); resolve(answer); });
+    win.loadFile('renderer/prompt.html');
+  });
+}
+
+// One file or a batch, any menu entry. Studio entries open the editor instead of writing a file.
+async function convertFile(p) {
+  const srcs = (p.paths && p.paths.length ? p.paths : p.path ? [p.path] : []).filter(Boolean);
+  if (!srcs.length || !p.op) return { ok: false, error: 'nothing to convert' };
+  if (p.op === 'studio') return openStudio(srcs[0], p.arg);
+  const c = cfg.convert || {};
+  const opts = { printPdf, outDir: c.outDir, quality: c.quality, pdfDpi: c.pdfDpi };
+  if (p.op === 'protect') {
+    opts.password = await askPassword();
+    if (!opts.password) return { ok: true };
+  }
+  const label = srcs.length > 1 ? `${srcs.length} files` : path.basename(srcs[0]);
+  fileToast(`Working on ${label}…`);
+  try {
+    const outs = srcs.length > 1 ? await converters.runMany(srcs, p.op, p.arg, opts) : [await converters.run(srcs[0], p.op, p.arg, opts)];
+    remember(outs);
+    shell.showItemInFolder(outs[0]);
+    fileToast(resultNote(srcs, outs));
+    return { ok: true };
+  } catch (e) {
+    fileToast(`${label}: ${e.message}`, false);
+    return { ok: false, error: e.message };
+  }
+}
+
+// "Saved a.jpg in Pictures · 2.4 MB → 610 KB (75% smaller)", noting when the name was already taken.
+function resultNote(srcs, outs) {
+  const out = outs[0], where = path.basename(path.dirname(out));
+  if (outs.length > 1) return `Saved ${outs.length} files in ${where}`;
+  const st = fs.existsSync(out) && fs.statSync(out);
+  if (st && st.isDirectory()) return `Saved ${path.basename(out)} (${fs.readdirSync(out).length} files)`;
+  const taken = / \(\d+\)$/.test(path.basename(out, path.extname(out)));
+  const a = srcs.length === 1 ? sizeOf(srcs[0]) : 0, b = sizeOf(out);
+  const delta = a && b ? ` · ${human(a)} → ${human(b)}${b < a ? ` (${Math.round((1 - b / a) * 100)}% smaller)` : ''}` : '';
+  return `Saved ${path.basename(out)} in ${where}${taken ? ' (name was taken)' : ''}${delta}`;
+}
+
+// ---- studio (image editor window) ----
+const studios = new Map();   // webContents id -> what that window was opened with
+// Reads the image a Studio window will edit. Returns the fields the window entry needs.
+async function studioJob(src) {
+  if (/\.pdf$/i.test(src)) {   // page editor: Studio keeps a list of source files, page 0 being the PDF itself
+    const pages = await converters.pdfPageCount(src);
+    return { src, kind: 'pdf', pages, sources: [{ path: src, kind: 'pdf', pages }], origSize: sizeOf(src) };
+  }
+  const data = await converters.studioBytes(src);
+  const meta = await converters.imageMeta(src).catch(() => ({ fields: {}, gps: null }));
+  return { src, ...data, meta, origSize: sizeOf(src) };
+}
+
+// src may be null: Studio then opens empty, ready for a file to be dropped or picked.
+async function openStudio(src, tool) {
+  let job = { src: null };
+  if (src) {
+    try { job = await studioJob(src); }
+    catch (e) { fileToast(`${path.basename(src)}: ${e.message}`, false); return { ok: false, error: e.message }; }
+  }
+  const win = new BrowserWindow({
+    width: 1180, height: 780, minWidth: 880, minHeight: 560, backgroundColor: '#0b0b0c', frame: false,
+    autoHideMenuBar: true, title: 'Bloom Studio', icon: windowIcon() || undefined,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+  });
+  const id = win.webContents.id;
+  studios.set(id, { ...job, tool });
+  win.on('closed', () => { for (const x of (studios.get(id)?.sources || [])) converters.releasePdf(x.path); studios.delete(id); });
+  win.loadFile('renderer/studio.html');
+  return { ok: true };
 }
 
 // ---- app list ----
@@ -1413,6 +1537,97 @@ function wireIPC() {
 
   ipcMain.handle('execute', (_e, node) => execute(node));
   ipcMain.handle('list-apps', () => listApps());
+  ipcMain.handle('studio-load', e => {
+    const j = studios.get(e.sender.id);
+    if (j && !j.src) return { empty: true };
+    if (j && j.kind === 'pdf') return { kind: 'pdf', name: path.basename(j.src), ext: 'pdf', origSize: j.origSize, pages: j.pages, tool: j.tool };
+    return j && { name: path.basename(j.src), ext: path.extname(j.src).slice(1).toLowerCase(), bytes: j.bytes, mime: j.mime, origSize: j.origSize, tool: j.tool, meta: j.meta };
+  });
+  ipcMain.handle('studio-save', (e, o) => {
+    const j = studios.get(e.sender.id);
+    if (!j) return { ok: false, error: 'window is no longer linked to a file' };
+    try {
+      const dir = converters.outDirFor(j.src, cfg.convert || {});
+      const out = converters.uniquePath(dir, `${path.basename(j.src, path.extname(j.src))}-${o.edited ? 'edited' : 'compressed'}`, o.ext);
+      fs.writeFileSync(out, Buffer.from(o.bytes));
+      remember([out]);
+      shell.showItemInFolder(out);
+      return { ok: true, note: resultNote([j.src], [out]) };
+    } catch (err) { return { ok: false, error: err.message }; }
+  });
+  ipcMain.handle('studio-op', async (e, op) => {
+    const j = studios.get(e.sender.id);
+    if (!j || !['strip-gps', 'strip-meta'].includes(op)) return { ok: false, error: 'not available' };
+    try {
+      const out = await converters.run(j.src, op, undefined, { outDir: (cfg.convert || {}).outDir });
+      remember([out]);
+      shell.showItemInFolder(out);
+      return { ok: true, note: resultNote([j.src], [out]) };
+    } catch (err) { return { ok: false, error: err.message }; }
+  });
+  // Studio's own "Open…" and drop target: swap the file behind this window, then it reloads itself.
+  ipcMain.handle('studio-open', async (e, picked) => {
+    const j = studios.get(e.sender.id), win = BrowserWindow.fromWebContents(e.sender);
+    if (!j) return { ok: false };
+    let file = picked;
+    if (!file) {
+      const r = await dialog.showOpenDialog(win, { title: 'Open an image or PDF', properties: ['openFile'],
+        filters: [{ name: 'Images and PDFs', extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp', 'svg', 'ico', 'heic', 'heif', 'tif', 'tiff', 'pdf'] }] });
+      if (r.canceled || !r.filePaths[0]) return { ok: false };
+      file = r.filePaths[0];
+    }
+    if (!/\.pdf$/i.test(file) && !converters.menuFor(file).some(n => n.op === 'bgremove')) return { ok: false, error: 'Studio opens images and PDFs' };
+    try { for (const x of (j.sources || [])) converters.releasePdf(x.path); studios.set(e.sender.id, { ...(await studioJob(file)), tool: j.tool }); return { ok: true }; }
+    catch (err) { return { ok: false, error: err.message }; }
+  });
+  // ---- Studio page editor ----
+  ipcMain.handle('pdf-thumb', (e, o) => {
+    const s = studios.get(e.sender.id)?.sources?.[o.src];
+    return s && Number.isInteger(o.index) ? converters.pageThumb(s.path, s.kind, o.index, Math.min(900, Math.max(120, o.width | 0))) : null;
+  });
+  // Adds files as new page sources. Used by both the picker and drops onto the page grid.
+  async function addSources(j, files) {
+    const added = [], errors = [];
+    for (const f of files) {
+      try {
+        const isPdf = /\.pdf$/i.test(f);
+        if (!isPdf && !converters.menuFor(f).some(n => n.op === 'bgremove')) throw new Error('not a PDF or image');
+        const pages = isPdf ? await converters.pdfPageCount(f) : 1;
+        j.sources.push({ path: f, kind: isPdf ? 'pdf' : 'image', pages });
+        added.push({ src: j.sources.length - 1, name: path.basename(f), pages });
+      } catch (err) { errors.push(`${path.basename(f)}: ${err.message}`); }
+    }
+    return { added, errors };
+  }
+  ipcMain.handle('pdf-add', async e => {
+    const j = studios.get(e.sender.id), win = BrowserWindow.fromWebContents(e.sender);
+    if (!j || !j.sources) return { added: [], errors: [] };
+    // "All files" is listed too: some pickers match extensions case-sensitively and would grey out IMG_01.JPG.
+    const r = await dialog.showOpenDialog(win, { title: 'Add pages from…', properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'PDFs and images', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp', 'heic', 'tif', 'tiff', 'PDF', 'PNG', 'JPG', 'JPEG', 'WEBP'] }, { name: 'All files', extensions: ['*'] }] });
+    return addSources(j, r.canceled ? [] : r.filePaths);
+  });
+  ipcMain.handle('pdf-add-files', (e, files) => {
+    const j = studios.get(e.sender.id);
+    return j && j.sources && Array.isArray(files) ? addSources(j, files.filter(f => typeof f === 'string').slice(0, 50)) : { added: [], errors: [] };
+  });
+  ipcMain.handle('pdf-save', async (e, o) => {
+    const j = studios.get(e.sender.id);
+    if (!j || !j.sources) return { ok: false, error: 'window is no longer linked to a file' };
+    const pages = Array.isArray(o.pages) ? o.pages : [];
+    const valid = pages.length && pages.every(p => { const s = j.sources[p.src]; return s && Number.isInteger(p.idx) && p.idx >= 0 && p.idx < s.pages && Number.isInteger(p.rot) && p.rot % 90 === 0; });
+    if (!valid) return { ok: false, error: pages.length ? 'invalid page list' : 'no pages left to save' };
+    try {
+      const buf = await converters.buildPdf(pages, j.sources);
+      const dir = converters.outDirFor(j.src, cfg.convert || {});
+      const out = converters.uniquePath(dir, `${path.basename(j.src, path.extname(j.src))}-${o.part ? 'pages' : 'edited'}`, 'pdf');
+      fs.writeFileSync(out, buf);
+      remember([out]);
+      shell.showItemInFolder(out);
+      return { ok: true, note: resultNote([j.src], [out]) };
+    } catch (err) { return { ok: false, error: err.message }; }
+  });
+  ipcMain.handle('convert-undo', () => undoLast());
   ipcMain.handle('open-settings', (_e, tab, cmd) => createSettings(tab, cmd));
   ipcMain.handle('quit', () => app.quit());
   ipcMain.handle('get-version', () => app.getVersion());
@@ -1550,8 +1765,15 @@ function wireIPC() {
         break;
       }
       case 'drop': {
-        if (!m.path) break;
-        summonFileRing(m.path);
+        const paths = (m.paths || [m.path]).filter(Boolean);
+        if (paths.length) summonFileRing(paths);
+        break;
+      }
+      // A file is hovering over the bud: bloom the convert targets so it can be dropped on one.
+      case 'drag-hover': {
+        const mimes = m.mimes || [m.mime];
+        const menu = mimes.length > 1 ? converters.menuForMany(mimes) : converters.menuFor(mimes[0]);
+        if (menu.length && !uiFlags.ringOpen) summonConvertRing(menu);
         break;
       }
     }
@@ -1689,15 +1911,26 @@ function wireIPC() {
   });
 }
 
-function summonFileRing(filePath) {
+function summonFileRing(paths) {
   if (!overlay) return;
+  const menu = paths.length > 1 ? converters.menuForMany(paths) : converters.menuFor(paths[0]);
   uiFlags.ringOpen = true;
   applyOverlayState();
   const c = budCenter();
   overlay.webContents.send('summon-ring', {
     budLocal: { x: c.x - ovBounds.x, y: c.y - ovBounds.y },
-    filePath
+    filePaths: paths,
+    menu
   });
+}
+
+// Mid-drag the path is still hidden from us, so the ring waits and the overlay reads the file on drop.
+function summonConvertRing(menu) {
+  if (!overlay) return;
+  uiFlags.ringOpen = true;
+  applyOverlayState();
+  const c = budCenter();
+  overlay.webContents.send('summon-ring', { budLocal: { x: c.x - ovBounds.x, y: c.y - ovBounds.y }, menu, dropMode: true });
 }
 
 // ---- boot ----

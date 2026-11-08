@@ -35,6 +35,7 @@ const tasksNode = () => ({ id: 'bloom-tasks', type: 'bloom', label: 'Tasks', ico
 // Every template opens the day with one tap, so this lives on the root ring, never
 // buried a layer down where you'd have to go looking for it.
 const startDay = (id, steps) => ({ id, type: 'macro', label: 'Start My Day', icon: 'zap', color: '#FB923C', params: { steps } });
+const studioNode = () => ({ id: 'bloom-studio', type: 'bloom', label: 'Studio', icon: 'palette', params: { cmd: 'studio' } });
 const settingsNode = () => ({ id: 'bloom-settings', type: 'bloom', label: 'Settings', icon: 'gear', params: { cmd: 'settings' } });
 
 function defaultTree() {
@@ -96,6 +97,7 @@ function defaultTree() {
         { action: 'open_url', urls: ['https://jira.atlassian.com'] }
       ]),
       tasksNode(),
+      studioNode(),
       settingsNode()
     ]
   };
@@ -160,6 +162,7 @@ const TEMPLATES = {
               ]
             },
             tasksNode(),
+            studioNode(),
             settingsNode()
           ]
         }
@@ -213,6 +216,7 @@ const TEMPLATES = {
               ]
             },
             tasksNode(),
+            studioNode(),
             settingsNode()
           ]
         }
@@ -268,6 +272,7 @@ const TEMPLATES = {
               ]
             },
             tasksNode(),
+            studioNode(),
             settingsNode()
           ]
         }
@@ -312,6 +317,8 @@ function defaults() {
     // The bud's gestures are fixed: double-tap dictates, hold reads the selection aloud.
     behavior: { hoverOpenDelay: 240, edgeSnap: true, scrollCycle: true },
     voice: { model: 'Xenova/whisper-base.en', language: 'en', ttsVoice: '', ttsRate: 1 },
+    // File tools (drag a file onto the bud). outDir: 'beside' the original, or a 'folder' called Bloom next to it.
+    convert: { outDir: 'beside', quality: 90, pdfDpi: 144 },
     updates: { autoCheck: true, channel: 'stable' },   // channel: 'stable' | 'beta'
     // Pomodoro. The running timer itself lives in main's memory — only preferences persist.
     // sounds[event] is a built-in tone name, 'file:<path>' for your own audio, or 'silent'
@@ -337,6 +344,7 @@ function defaults() {
     pinnedIds: ['term-home', 'playpause', 'worktabs'],
     seenOnboarding: false,
     seenTour: false,                  // settings-window coach marks, shown once
+    studioMigrated: false,            // flipped by the one-time backfill that adds the Studio petal
     focusMigrated: false,             // flipped by the one-time Focus/Tasks backfill on load
     autostartDefaulted: false,        // first run enables launch-at-login once
     notifDwellDefaulted: false,       // one-time reset of the hover-to-read delay
@@ -378,6 +386,24 @@ function migrateFocus(cfg) {
   return true;
 }
 
+// Studio arrived after many rings were already built. Add its petal once, if there's room;
+// after that the user owns the tree, so deleting it sticks.
+function migrateStudio(cfg) {
+  if (cfg.studioMigrated) return false;
+  cfg.studioMigrated = true;
+  const add = root => {
+    if (!root || !Array.isArray(root.children)) return;
+    let has = false;
+    (function walk(n) { if (n.type === 'bloom' && n.params && n.params.cmd === 'studio') has = true; (n.children || []).forEach(walk); })(root);
+    if (has || root.children.length >= RING_CAP) return;
+    const at = root.children.findIndex(n => n.type === 'bloom' && n.params && n.params.cmd === 'settings');
+    root.children.splice(at < 0 ? root.children.length : at, 0, studioNode());
+  };
+  add(cfg.root);
+  for (const p of Object.values((cfg.profiles && cfg.profiles.saved) || {})) if (p) add(p.root);
+  return true;
+}
+
 // The hover-to-read delay first shipped at 2s and turned out to be a long hold.
 // Move anyone still sitting on that original default down to the new one, exactly
 // once, so a delay someone later chooses deliberately is never overridden.
@@ -400,7 +426,7 @@ function load() {
       if (!parsed || typeof parsed !== 'object' || !parsed.root) continue;
       cache = merge(defaults(), parsed);
       if (f !== FILE) recoveredFrom = path.basename(f);
-      const migrated = [migrateFocus(cache), migrateNotifDwell(cache)].some(Boolean);
+      const migrated = [migrateFocus(cache), migrateStudio(cache), migrateNotifDwell(cache)].some(Boolean);
       if (migrated) save(cache);
       return cache;
     } catch { /* try the next backup */ }

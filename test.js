@@ -66,8 +66,8 @@ const kids = root => (root.children || []).map(n => n.id);
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(legacy));
 
   const cfg = store.load();
-  assert.deepStrictEqual(kids(cfg.root), ['x', 'focus', 'bloom-tasks'], 'backfills the live tree');
-  assert.deepStrictEqual(kids(cfg.profiles.saved.Work.root), ['a', 'focus', 'bloom-tasks'], 'backfills saved profiles too');
+  assert.deepStrictEqual(kids(cfg.root), ['x', 'focus', 'bloom-tasks', 'bloom-studio'], 'backfills the live tree');
+  assert.deepStrictEqual(kids(cfg.profiles.saved.Work.root), ['a', 'focus', 'bloom-tasks', 'bloom-studio'], 'backfills saved profiles too');
   assert.strictEqual(cfg.focusMigrated, true);
 
   // A second run must not append them again — and must respect a user who deleted them.
@@ -88,5 +88,101 @@ const kids = root => (root.children || []).map(n => n.id);
   assert.strictEqual(m.focus.autoStartBreak, false);
 }
 
-fs.rmSync(sandbox, { recursive: true, force: true });
-console.log('✓ all config checks passed');
+console.log('✓ config checks passed');
+
+// ---- file conversion and tools (every engine is bundled, so this runs offline) ----
+const converters = require('./converters');
+const labels = m => m.flatMap(n => n.children ? labels(n.children) : [n.label]);
+{
+  assert.ok(['PNG', 'JPG', 'TXT', 'DOCX', 'Compress'].every(l => labels(converters.menuFor('application/pdf')).includes(l)), 'mime types resolve while dragging');
+  assert.ok(!labels(converters.menuFor('photo.JPEG')).includes('JPG'), 'never offer a no-op conversion');
+  assert.ok(labels(converters.menuFor('image/png')).includes('Remove BG'), 'images get background removal');
+  assert.ok(labels(converters.menuFor('notes.md')).includes('DOCX'), 'text documents convert to docx');
+  assert.deepStrictEqual(converters.menuFor('application/zip'), [], 'unknown types offer nothing');
+}
+(async () => {
+  const { createCanvas, loadImage } = require('@napi-rs/canvas');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bloom-conv-'));
+  const png = path.join(dir, 'a.png');
+  const cv = createCanvas(80, 60); const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 80, 60); g.fillStyle = '#e00'; g.fillRect(25, 15, 30, 30);
+  fs.writeFileSync(png, cv.toBuffer('image/png'));
+  const dims = async f => { const i = await loadImage(fs.readFileSync(f)); return [i.width, i.height]; };
+
+  const jpg = await converters.convert(png, 'jpg');
+  assert.strictEqual(path.basename(jpg), 'a.jpg');
+  assert.strictEqual(fs.readFileSync(jpg).subarray(0, 2).toString('hex'), 'ffd8', 'real jpeg bytes');
+  assert.strictEqual(path.basename(await converters.convert(png, 'jpg')), 'a (1).jpg', 'never overwrites');
+  const pdf = await converters.convert(png, 'pdf');
+  assert.strictEqual(fs.readFileSync(pdf).subarray(0, 4).toString(), '%PDF', 'image -> pdf');
+  const page = await converters.convert(pdf, 'png');
+  assert.ok((await dims(page))[0] > 0, 'pdf page rendered');
+  assert.strictEqual(fs.readFileSync(await converters.convert(png, 'ico')).readUInt16LE(2), 1, 'ico header');
+  await assert.rejects(() => converters.convert(png, 'mp3'), /cannot convert/);
+  await assert.rejects(() => converters.run(png, 'rm', '-rf'), /cannot rm/, 'ops outside the menu are refused');
+
+  assert.deepStrictEqual(await dims(await converters.run(png, 'crop', '1:1')), [60, 60], 'centre square crop');
+  assert.deepStrictEqual(await dims(await converters.run(png, 'resize', 'scale:0.5')), [40, 30]);
+  assert.deepStrictEqual(await dims(await converters.run(png, 'rotate', 'cw')), [60, 80]);
+  const px = async f => { const i = await loadImage(fs.readFileSync(f)); const c = createCanvas(i.width, i.height).getContext('2d'); c.drawImage(i, 0, 0); return c.getImageData(0, 0, 1, 1).data; };
+  const bw = await px(await converters.run(png, 'gray'));
+  assert.ok(bw[0] === bw[1] && bw[1] === bw[2], 'black & white');
+
+  // background removal: the model is real, so just check it ran and produced transparency info
+  const nobg = await converters.run(png, 'bgremove');
+  assert.strictEqual(path.basename(nobg), 'a-no-bg.png');
+  assert.deepStrictEqual(await dims(nobg), [80, 60], 'background removal keeps the size');
+
+  const md = path.join(dir, 'n.md');
+  fs.writeFileSync(md, '# Title\n\nHello **world**\n\n- one\n- two\n');
+  const docx = await converters.convert(md, 'docx');
+  assert.strictEqual(fs.readFileSync(docx).subarray(0, 2).toString(), 'PK', 'docx is a zip');
+  const back = (await require('mammoth').extractRawText({ path: docx })).value;
+  assert.ok(back.includes('Title') && back.includes('Hello world') && back.includes('two'), 'docx round-trips its text');
+
+  // ---- more formats, PDF tools, metadata, batches ----
+  for (const [to, magic] of [['tiff', '4d4d'], ['bmp', '424d'], ['gif', '4749']]) {
+    const f = await converters.convert(png, to);
+    assert.strictEqual(fs.readFileSync(f).subarray(0, 2).toString('hex'), magic, `png -> ${to}`);
+  }
+  assert.deepStrictEqual(await dims(await converters.convert(path.join(dir, 'a.tiff'), 'png')), [80, 60], 'tiff decodes');
+  const csv = path.join(dir, 'd.csv');
+  fs.writeFileSync(csv, 'name,qty\n"Widget, large",3\n');
+  const csvDocx = await converters.convert(csv, 'docx');
+  assert.ok((await require('mammoth').extractRawText({ path: csvDocx })).value.includes('Widget, large'), 'csv keeps quoted commas');
+
+  const two = path.join(dir, 'two.pdf');
+  { const { PDFDocument } = require('pdf-lib'); const d = await PDFDocument.create(); d.addPage([200, 200]); d.addPage([200, 200]); fs.writeFileSync(two, await d.save()); }
+  assert.strictEqual(fs.readdirSync(await converters.run(two, 'split')).length, 2, 'split makes one pdf per page');
+  const merged = (await converters.runMany([two, two], 'merge'))[0];
+  assert.strictEqual((await require('pdf-lib').PDFDocument.load(fs.readFileSync(merged))).getPageCount(), 4, 'merge adds the pages up');
+  const combined = (await converters.runMany([png, png], 'combine'))[0];
+  assert.strictEqual((await require('pdf-lib').PDFDocument.load(fs.readFileSync(combined))).getPageCount(), 2, 'images combine into one pdf');
+  const locked = await converters.run(two, 'protect', undefined, { password: 'pw1' });
+  await assert.rejects(() => converters.run(locked, 'rotate', 'cw'), undefined, 'a protected pdf is not readable without the password');
+  assert.ok(fs.readFileSync(locked).includes('/Encrypt'), 'pdf is encrypted');
+  await assert.rejects(() => converters.run(two, 'protect'), /no password/);
+  assert.deepStrictEqual(converters.menuForMany(['a.png', 'b.jpg']).map(n => n.label).slice(0, 2), ['One PDF', 'JPG']);
+  assert.deepStrictEqual(converters.menuForMany(['a.png', 'b.pdf']), [], 'mixed batches offer nothing');
+
+  // page editor: reorder, drop, rotate, and pull pages from a second source
+  const four = path.join(dir, 'four.pdf');
+  { const { PDFDocument } = require('pdf-lib'); const d = await PDFDocument.create(); for (let i = 1; i <= 4; i++) d.addPage([100 * i, 100]); fs.writeFileSync(four, await d.save()); }
+  assert.strictEqual(await converters.pdfPageCount(four), 4);
+  const srcs = [{ path: four, kind: 'pdf', pages: 4 }, { path: png, kind: 'image', pages: 1 }];
+  const built = await require('pdf-lib').PDFDocument.load(await converters.buildPdf([{ src: 0, idx: 3, rot: 0 }, { src: 0, idx: 0, rot: 90 }, { src: 1, idx: 0, rot: 0 }, { src: 0, idx: 0, rot: 0 }], srcs));
+  assert.deepStrictEqual(built.getPages().map(p => p.getWidth()), [400, 100, 80, 100], 'pages come out in the chosen order, images become pages');
+  assert.strictEqual(built.getPage(1).getRotation().angle, 90, 'a page keeps its extra turn');
+  assert.ok((await converters.pageThumb(four, 'pdf', 2, 200)).subarray(0, 2).toString('hex') === 'ffd8', 'page thumbnails are JPEGs');
+  await converters.releasePdf(four);
+
+  const piexif = require('piexifjs');
+  const withGps = path.join(dir, 'gps.jpg');
+  fs.writeFileSync(withGps, Buffer.from(piexif.insert(piexif.dump({ GPS: { [piexif.GPSIFD.GPSLatitudeRef]: 'N', [piexif.GPSIFD.GPSLatitude]: [[12, 1], [58, 1], [0, 1]], [piexif.GPSIFD.GPSLongitudeRef]: 'E', [piexif.GPSIFD.GPSLongitude]: [[77, 1], [35, 1], [0, 1]] } }), jpg.length ? fs.readFileSync(jpg).toString('binary') : ''), 'binary'));
+  assert.ok((await converters.imageMeta(withGps)).gps, 'gps is read');
+  assert.strictEqual((await converters.imageMeta(await converters.run(withGps, 'strip-gps'))).gps, null, 'strip-gps removes the location');
+
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(sandbox, { recursive: true, force: true });
+  console.log('✓ conversion checks passed');
+})().catch(e => { console.error(e); process.exit(1); });

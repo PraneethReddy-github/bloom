@@ -3184,6 +3184,7 @@
   // ==== GENERAL TAB ====
   function renderGeneral(pane) {
     const showOnStartup = cfg.behavior && cfg.behavior.showOnStartup !== false; // default true
+    const cv = cfg.convert || {};
     const isWin = bloom.getPlatform() === 'win32';
     pane.innerHTML = `
       <h1>General &amp; Startup</h1>
@@ -3197,6 +3198,24 @@
         <div class="ctl-row" data-sid="showOnStartup" data-search="show bud on start">
           <div class="ctl-label"><div class="t">Show bud on start</div></div>
           <div class="ctl-input"><label class="tgl"><input type="checkbox" id="g-show" ${showOnStartup ? 'checked' : ''} aria-label="Show bud on start"><span class="knob"></span></label></div>
+        </div>
+      </div>
+      <h2 class="sec">File tools</h2>
+      <div class="card">
+        <div class="ctl-row" data-sid="convOut" data-search="converted files location folder drag drop">
+          <div class="ctl-label"><div class="t">Save results</div><div class="s">Drag a file onto the bud to convert or edit it. Originals are never changed.</div></div>
+          <div class="ctl-input"><select id="g-cv-out" class="in sel" aria-label="Where results go">
+            <option value="beside" ${cv.outDir !== 'folder' ? 'selected' : ''}>Next to the original</option>
+            <option value="folder" ${cv.outDir === 'folder' ? 'selected' : ''}>In a "Bloom" folder beside it</option></select></div>
+        </div>
+        <div class="ctl-row" data-sid="convQ" data-search="image quality jpg webp">
+          <div class="ctl-label"><div class="t">Image quality</div><div class="s">For JPG, WebP and AVIF results</div></div>
+          <div class="ctl-input"><input id="g-cv-q" class="in" type="number" min="40" max="100" value="${Number(cv.quality) || 90}" aria-label="Image quality"></div>
+        </div>
+        <div class="ctl-row" data-sid="convDpi" data-search="pdf resolution dpi">
+          <div class="ctl-label"><div class="t">PDF to image resolution</div><div class="s">Higher is sharper and bigger</div></div>
+          <div class="ctl-input"><select id="g-cv-dpi" class="in sel" aria-label="PDF resolution">
+            ${[[96, '96 dpi · small'], [144, '144 dpi · balanced'], [200, '200 dpi · sharp'], [300, '300 dpi · print']].map(([v, l]) => `<option value="${v}" ${Number(cv.pdfDpi || 144) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         </div>
       </div>
       <h2 class="sec">Configuration</h2>
@@ -3229,6 +3248,9 @@
       catch (e) { auto.checked = !auto.checked; toast('Could not change autostart: ' + (e.message || e), { kind: 'bad' }); }
     });
     $('#g-show', pane).addEventListener('change', e => patch({ behavior: { showOnStartup: e.target.checked } }));
+    $('#g-cv-out', pane).addEventListener('change', e => patch({ convert: { outDir: e.target.value } }));
+    $('#g-cv-q', pane).addEventListener('change', e => patch({ convert: { quality: Math.max(40, Math.min(100, Number(e.target.value) || 90)) } }));
+    $('#g-cv-dpi', pane).addEventListener('change', e => patch({ convert: { pdfDpi: Number(e.target.value) } }));
     $('#g-export', pane).addEventListener('click', async () => {
       const r = await bloom.exportConfig();
       if (r && r.path) toast('Exported to ' + r.path, { kind: 'ok' });

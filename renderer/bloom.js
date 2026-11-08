@@ -412,6 +412,7 @@
     for (let i = state.stack.length - 1; i >= 0; i--) destroyRing(state.stack[i]);
     state.stack = [];
     state.open = false;
+    state.dropMode = false;
     state.hover = state.focus = null;
     stage.classList.remove('open');
     drawWires(); renderHUD();
@@ -943,16 +944,36 @@
   }
 
   // file dropped on the bud → contextual mini-ring (path arrives via main)
-  function fileRingFor(p) {
+  // Main sends the tools for a file type as a tree of { label, icon, op, arg } / { label, icon, children };
+  // the ring just needs them as nodes. `target` is the file path, an array of paths for a batch, or null
+  // while the file is still being dragged (the drop supplies it).
+  const targetParams = t => Array.isArray(t) ? (t.length > 1 ? { paths: t } : { path: t[0] }) : { path: t };
+  function toolNodes(menu, target, prefix = '__t') {
+    return menu.map((m, i) => {
+      const id = `${prefix}-${i}`;
+      return m.children
+        ? { id, type: 'folder', label: m.label, icon: m.icon, children: toolNodes(m.children, target, id), group: m.group }
+        : { id, type: 'convert', label: m.label, icon: m.icon, group: m.group, params: { op: m.op, arg: m.arg, ...targetParams(target) } };
+    });
+  }
+  function convertRingFor(menu) {
+    return { id: '__convert', type: 'folder', label: 'Convert to…', children: toolNodes(menu, null) };
+  }
+  function fileRingFor(paths, menu) {
+    if (paths.length > 1) return { id: '__file', type: 'folder', label: `${paths.length} files`, children: toolNodes(menu || [], paths) };
+    const p = paths[0];
     const dir = p.replace(/[/\\][^/\\]*$/, '') || p;
     const name = p.split(/[/\\]/).pop();
-    return {
-      id: '__file', type: 'folder', label: name, children: [
-        { id: '__f-open', type: 'open_path', label: 'Open', icon: 'file', params: { path: p } },
-        { id: '__f-dir', type: 'open_path', label: 'Open Folder', icon: 'folder-open', params: { path: dir } },
-        { id: '__f-copy', type: 'snippet', label: 'Copy Path', icon: 'clipboard', params: { text: p, mode: 'copy' } }
-      ]
-    };
+    const kids = [
+      { id: '__f-open', type: 'open_path', label: 'Open', icon: 'file', params: { path: p } },
+      { id: '__f-dir', type: 'open_path', label: 'Open Folder', icon: 'folder-open', params: { path: dir } },
+      { id: '__f-copy', type: 'snippet', label: 'Copy Path', icon: 'clipboard', params: { text: p, mode: 'copy' } }
+    ];
+    // Tools sit on this first layer next to Open; the formats share one "Convert" petal.
+    const nodes = toolNodes(menu || [], p), formats = nodes.filter(n => n.group === 'convert');
+    kids.push(...nodes.filter(n => n.group !== 'convert'));
+    if (formats.length) kids.push({ id: '__f-convert', type: 'folder', label: 'Convert', icon: 'refresh', children: formats });
+    return { id: '__file', type: 'folder', label: name, children: kids };
   }
 
   function findNode(root, id) {
@@ -1323,6 +1344,7 @@
       { ic: 'lock', label: cfg.bud.pinned ? 'Unpin Position' : 'Pin Position', fn: () => window.bloom.patchConfig({ bud: { pinned: !cfg.bud.pinned } }) },
       { ic: 'moon', label: cfg.notifications && cfg.notifications.dnd ? 'Turn off Do Not Disturb' : 'Do Not Disturb',
         fn: () => window.bloom.patchConfig({ notifications: { dnd: !(cfg.notifications && cfg.notifications.dnd) } }) },
+      { ic: 'refresh', label: 'Undo last conversion', fn: () => window.bloom.convertUndo() },
       { sep: true },
       { ic: 'power', label: 'Quit Bloom', fn: () => window.bloom.quit(), danger: true }
     ];
@@ -1390,8 +1412,40 @@
     if (d.budLocal) state.bud = d.budLocal;
     if (state.palOpen) closePalette();
     if (state.open) closeAll();
-    if (d.filePath) { openRoot(fileRingFor(d.filePath)); return; }
+    state.dropMode = !!d.dropMode;
+    state.dropMenu = d.menu;
+    if (d.dropMode) { openRoot(convertRingFor(d.menu)); return; }
+    if (d.filePaths) { openRoot(fileRingFor(d.filePaths, d.menu)); return; }
     openRoot();
+  });
+
+  // A file dragged over the bud blooms a convert ring (dropMode); dropping on a petal converts it.
+  // Dropping anywhere else, or dragging out of the window, just puts the ring away.
+  document.addEventListener('dragover', e => {
+    if (!state.dropMode) return;
+    e.preventDefault();
+    // Dragged well clear of the ring: put it away (the overlay covers the whole screen, so
+    // leaving the window never happens).
+    const outer = dispR(state.stack[state.stack.length - 1]) + nodeSize();
+    if (Math.hypot(e.clientX - state.bud.x, e.clientY - state.bud.y) > outer + 70) { closeAll(); return; }
+    const h = hitTest(e.clientX, e.clientY);
+    if (h.ri != null) setHover(h.ri, h.ni); else setHover(null);
+  });
+  document.addEventListener('drop', e => {
+    if (!state.dropMode) return;
+    e.preventDefault();
+    const h = hitTest(e.clientX, e.clientY);
+    const srcs = [...e.dataTransfer.files].map(f => window.bloom.filePath(f)).filter(Boolean);
+    const src = srcs.length ? srcs : null;
+    if (h.ri != null && src) {
+      const node = state.stack[h.ri].items[h.ni].node;
+      runNode({ ...node, params: { op: node.params.op, arg: node.params.arg, ...targetParams(src) } }, state.stack[h.ri].els[h.ni]);
+    } else if (h.bud && src) {
+      // Dropped on the bud itself: open the full file ring (open, copy path, every conversion).
+      const menu = state.dropMenu;
+      closeAll();
+      openRoot(fileRingFor(src, menu));
+    } else closeAll();
   });
   window.bloom.on('close-ring', () => closeAll());
   window.bloom.on('pop-ring', () => popRing());

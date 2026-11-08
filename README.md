@@ -72,7 +72,12 @@ Bloom consists of two main elements: the **bud** (the small floating icon) and t
 | **Scroll** | Cycle through pinned actions in a chip — click the bud to run whichever one's showing |
 | **Middle-click**| Hide to tray |
 | **Right-click** | Edit Actions · Settings · Pin position · Hide · Quit |
-| **Drop a file** | Shows a small ring: Open · Open folder · Copy path |
+| **Drag a file onto the bud** | The ring blooms with what that file can become, plus tools. Drop it on a petal; the result lands next to the original and is never overwritten (`photo (1).jpg`). Drop several files at once to combine images into one PDF or merge PDFs. Works fully offline. Right-click the bud → **Undo last conversion** moves the last result to the trash. |
+| **Images** | PNG · JPG · WebP · AVIF · PDF, plus ICO · TIFF · BMP · GIF under *More formats*. HEIC and TIFF open too. **Remove BG**, **Quick** (crop ratios, resize, rotate, flip, B&W, compress, strip location or metadata) and **Studio**: a full editor with Crop (free or ratio), Edit (light, colour, auto), Add BG (gradients, padding, corners, shadow), Annotate (arrows, boxes, steps, text, marker), Redact (black, blur, pixelate), Resize, Compress (quality or target size), Info (EXIF and GPS). |
+| **PDF** | PNG · JPG · TXT · DOCX. **Studio** is a page editor: drag pages to reorder, rotate, delete, duplicate, add pages from other PDFs or images, or save just the selected pages. Also Compress, Split, Rotate, Password (AES-256), Extract images, Strip metadata. |
+| **Docs** (docx, md, txt, csv, html) | PDF · DOCX · HTML · TXT |
+| **Audio / Video** | MP3 · WAV · FLAC · OGG · M4A / MP4 · WebM · MKV · GIF · MP3, plus Compress, 720p and Mute for video |
+| **Drop a file on the bud** | Shows a small ring: Open · Open folder · Copy path · Convert to… |
 
 ### Built-in Voice AI (No Internet Required)
 

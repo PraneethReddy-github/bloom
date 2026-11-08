@@ -10,6 +10,7 @@
     "preload.js",
     "config.js",
     "garden.js",
+    "converters.js",
     "RELEASE_NOTES.md",
     "models/**/*",
     "resources/icon.png",
@@ -20,7 +21,11 @@
   "asarUnpack": [
     "**/node_modules/onnxruntime-node/**/*",
     "**/node_modules/sharp/**/*",
-    "**/node_modules/@img/**/*"
+    "**/node_modules/@img/**/*",
+    "**/node_modules/@napi-rs/**/*",
+    "**/node_modules/ffmpeg-static/**/*",
+    "**/node_modules/@neslinesli93/**/*",
+    "models/bg/**/*"
   ],
   "npmRebuild": false,
   "win": {
